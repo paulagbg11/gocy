@@ -128,7 +128,7 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
             onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
           />
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 min-w-0">
             <Label htmlFor="start_date">Llegada</Label>
             <Input

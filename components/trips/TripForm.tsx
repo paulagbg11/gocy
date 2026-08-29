@@ -99,7 +99,7 @@ export function TripForm() {
         <Textarea id="destination" rows={1} placeholder="Londres, Reino Unido" {...register("destination")} />
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 min-w-0">
           <Label htmlFor="start_date">Llegada</Label>
           <Input id="start_date" type="date" className="w-full min-w-0" {...register("start_date")} />
