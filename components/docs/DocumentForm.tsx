@@ -7,6 +7,7 @@ import { useCreateDocument, useUpdateDocument, useDeleteDocument } from "@/lib/q
 import { useProfile } from "@/components/profile/ProfileProvider";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Input, Label, Textarea } from "@/components/ui/Input";
+import { DateField } from "@/components/ui/DateField";
 import { Button } from "@/components/ui/Button";
 import type { DocumentDetails, DocumentType, TripDocument } from "@/lib/supabase/types";
 
@@ -59,11 +60,10 @@ function DateTimeField({
     <div>
       <Label>{label}</Label>
       <div className="flex gap-2">
-        <Input
-          type="date"
+        <DateField
           value={datePart}
           onChange={(e) => update(e.target.value, timePart)}
-          className="flex-1 !w-auto min-w-0"
+          wrapperClassName="flex-1 min-w-0"
         />
         <Input
           type="time"

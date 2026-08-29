@@ -9,6 +9,7 @@ import { useProfile } from "@/components/profile/ProfileProvider";
 import { createClient } from "@/lib/supabase/client";
 import { CategoryManager } from "@/components/settings/CategoryManager";
 import { Input, Label, Textarea } from "@/components/ui/Input";
+import { DateField } from "@/components/ui/DateField";
 import { Button } from "@/components/ui/Button";
 
 export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/settings">) {
@@ -131,22 +132,18 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 min-w-0">
             <Label htmlFor="start_date">Llegada</Label>
-            <Input
+            <DateField
               id="start_date"
-              type="date"
               value={form.startDate}
               onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-              className="w-full min-w-0"
             />
           </div>
           <div className="flex-1 min-w-0">
             <Label htmlFor="end_date">Salida</Label>
-            <Input
+            <DateField
               id="end_date"
-              type="date"
               value={form.endDate}
               onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-              className="w-full min-w-0"
             />
           </div>
         </div>
