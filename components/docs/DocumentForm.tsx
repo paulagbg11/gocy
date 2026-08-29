@@ -7,7 +7,7 @@ import { useCreateDocument, useUpdateDocument, useDeleteDocument } from "@/lib/q
 import { useProfile } from "@/components/profile/ProfileProvider";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Input, Label, Textarea } from "@/components/ui/Input";
-import { DateField } from "@/components/ui/DateField";
+import { DateTimeField } from "@/components/ui/DateTimeField";
 import { Button } from "@/components/ui/Button";
 import type { DocumentDetails, DocumentType, TripDocument } from "@/lib/supabase/types";
 
@@ -36,42 +36,25 @@ const FIELDS_BY_TYPE: Record<DocumentType, { key: string; label: string; type?: 
   note: [],
 };
 
-// input type="datetime-local" se renderiza demasiado ancho en iOS Safari y
-// provoca scroll horizontal en la pantalla — se guarda igualmente como un
-// único "YYYY-MM-DDTHH:mm" en `details`, pero se edita como dos campos
-// nativos (fecha y hora) más estrechos y fiables en móvil.
-function DateTimeField({
+// Una sola caja "fecha y hora" del mismo ancho que cualquier otro campo del
+// formulario (ver components/ui/DateTimeField.tsx: usa position:absolute
+// para que el ancho lo imponga el contenedor y no el widget nativo, que en
+// iOS Safari puede pedir más sitio del que se le da).
+function DateTimeSection({
+  id,
   label,
   value,
   onChange,
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
 }) {
-  const [datePart, timePart] = value ? value.split("T") : ["", ""];
-
-  const update = (nextDate: string, nextTime: string) => {
-    if (!nextDate && !nextTime) return onChange("");
-    onChange(`${nextDate}T${nextTime || "00:00"}`);
-  };
-
   return (
     <div>
-      <Label>{label}</Label>
-      <div className="flex gap-2">
-        <DateField
-          value={datePart}
-          onChange={(e) => update(e.target.value, timePart)}
-          wrapperClassName="flex-1 min-w-0"
-        />
-        <Input
-          type="time"
-          value={timePart}
-          onChange={(e) => update(datePart, e.target.value)}
-          className="!w-28 min-w-0 shrink-0"
-        />
-      </div>
+      <Label htmlFor={id}>{label}</Label>
+      <DateTimeField id={id} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
@@ -168,8 +151,9 @@ export function DocumentForm({ tripId, editing, onSaved }: DocumentFormProps) {
 
       {FIELDS_BY_TYPE[type].map((field) =>
         field.type === "datetime-local" ? (
-          <DateTimeField
+          <DateTimeSection
             key={field.key}
+            id={field.key}
             label={field.label}
             value={details[field.key] ?? ""}
             onChange={(v) => setField(field.key, v)}
