@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DOCUMENT_TYPE_LABEL } from "@/lib/documents";
+import { DOCUMENT_TYPE_LABEL, DOCUMENT_TYPE_ORDER } from "@/lib/documents";
 import { useCreateDocument, useUpdateDocument, useDeleteDocument } from "@/lib/queries/documents";
 import { useProfile } from "@/components/profile/ProfileProvider";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Chip } from "@/components/ui/Chip";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { DocumentDetails, DocumentType, TripDocument } from "@/lib/supabase/types";
@@ -20,6 +20,16 @@ const FIELDS_BY_TYPE: Record<DocumentType, { key: string; label: string; type?: 
     { key: "arrival_time", label: "Hora de llegada", type: "datetime-local" },
     { key: "confirmation_code", label: "Localizador" },
   ],
+  transport: [
+    { key: "company", label: "Compañía" },
+    { key: "service_number", label: "Nº de tren/bus" },
+    { key: "departure_station", label: "Estación de salida" },
+    { key: "departure_time", label: "Hora de salida", type: "datetime-local" },
+    { key: "arrival_station", label: "Estación de llegada" },
+    { key: "arrival_time", label: "Hora de llegada", type: "datetime-local" },
+    { key: "seat", label: "Asiento / coche" },
+    { key: "confirmation_code", label: "Localizador" },
+  ],
   lodging: [
     { key: "address", label: "Dirección" },
     { key: "check_in", label: "Check-in", type: "datetime-local" },
@@ -31,6 +41,13 @@ const FIELDS_BY_TYPE: Record<DocumentType, { key: string; label: string; type?: 
     { key: "date_time", label: "Fecha y hora", type: "datetime-local" },
     { key: "party_size", label: "Nº de personas", type: "number" },
     { key: "confirmation_code", label: "Nº de reserva" },
+  ],
+  ticket: [
+    { key: "venue", label: "Lugar / evento" },
+    { key: "date_time", label: "Fecha y hora", type: "datetime-local" },
+    { key: "quantity", label: "Nº de entradas", type: "number" },
+    { key: "seat", label: "Asiento / zona" },
+    { key: "confirmation_code", label: "Nº de entrada / localizador" },
   ],
   note: [],
 };
@@ -105,15 +122,15 @@ export function DocumentForm({ tripId, editing, onSaved }: DocumentFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <SegmentedControl
-        options={(Object.keys(DOCUMENT_TYPE_LABEL) as DocumentType[]).map((t) => ({
-          value: t,
-          label: DOCUMENT_TYPE_LABEL[t],
-        }))}
-        value={type}
-        onChange={setType}
-        className="self-start"
-      />
+      {/* Chips que hacen wrap en vez de una barra segmentada: con 6 tipos, una
+          barra en una sola línea se saldría de la pantalla en móvil. */}
+      <div className="flex flex-wrap gap-2">
+        {DOCUMENT_TYPE_ORDER.map((t) => (
+          <Chip key={t} type="button" active={type === t} onClick={() => setType(t)}>
+            {DOCUMENT_TYPE_LABEL[t]}
+          </Chip>
+        ))}
+      </div>
 
       <div>
         <Label htmlFor="title">Título</Label>

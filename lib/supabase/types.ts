@@ -1,4 +1,4 @@
-export type DocumentType = "flight" | "lodging" | "reservation" | "note";
+export type DocumentType = "flight" | "transport" | "lodging" | "reservation" | "ticket" | "note";
 
 export interface Profile {
   id: string;
@@ -92,7 +92,32 @@ export interface ReservationDetails {
   confirmation_code?: string;
 }
 
-export type DocumentDetails = FlightDetails | LodgingDetails | ReservationDetails | Record<string, never>;
+export interface TransportDetails {
+  company?: string;
+  service_number?: string;
+  departure_station?: string;
+  departure_time?: string;
+  arrival_station?: string;
+  arrival_time?: string;
+  seat?: string;
+  confirmation_code?: string;
+}
+
+export interface TicketDetails {
+  venue?: string;
+  date_time?: string;
+  quantity?: number;
+  seat?: string;
+  confirmation_code?: string;
+}
+
+export type DocumentDetails =
+  | FlightDetails
+  | TransportDetails
+  | LodgingDetails
+  | ReservationDetails
+  | TicketDetails
+  | Record<string, never>;
 
 export interface TripDocument {
   id: string;

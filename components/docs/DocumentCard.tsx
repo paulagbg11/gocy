@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { Plane, BedDouble, CalendarCheck, StickyNote, Clock } from "lucide-react";
+import { Plane, TrainFront, BedDouble, CalendarCheck, Ticket, StickyNote, Clock } from "lucide-react";
 import { DOCUMENT_TYPE_LABEL, documentEventTime } from "@/lib/documents";
 import type { DocumentType, TripDocument } from "@/lib/supabase/types";
 
 const TYPE_ICON: Record<DocumentType, typeof Plane> = {
   flight: Plane,
+  transport: TrainFront,
   lodging: BedDouble,
   reservation: CalendarCheck,
+  ticket: Ticket,
   note: StickyNote,
 };
 

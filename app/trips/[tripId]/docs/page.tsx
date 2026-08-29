@@ -4,7 +4,7 @@ import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { useDocuments } from "@/lib/queries/documents";
-import { DOCUMENT_TYPE_LABEL } from "@/lib/documents";
+import { DOCUMENT_TYPE_LABEL, DOCUMENT_TYPE_ORDER } from "@/lib/documents";
 import { DocumentCard } from "@/components/docs/DocumentCard";
 import { Chip } from "@/components/ui/Chip";
 import type { DocumentType } from "@/lib/supabase/types";
@@ -21,12 +21,14 @@ export default function DocsPage({ params }: PageProps<"/trips/[tripId]/docs">) 
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
+      <div className="flex items-start justify-between gap-2 px-4 py-3">
+        {/* wrap en vez de scroll horizontal: con 7 filtros, una sola línea
+            obligaba a arrastrar para ver los últimos tipos. */}
+        <div className="flex flex-wrap gap-2">
           <Chip active={filter === "all"} onClick={() => setFilter("all")}>
             Todos
           </Chip>
-          {(Object.keys(DOCUMENT_TYPE_LABEL) as DocumentType[]).map((t) => (
+          {DOCUMENT_TYPE_ORDER.map((t) => (
             <Chip key={t} active={filter === t} onClick={() => setFilter(t)}>
               {DOCUMENT_TYPE_LABEL[t]}
             </Chip>
@@ -34,7 +36,7 @@ export default function DocsPage({ params }: PageProps<"/trips/[tripId]/docs">) 
         </div>
         <Link
           href={`/trips/${tripId}/docs/new`}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground ml-2"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground"
           aria-label="Nuevo documento"
         >
           <Plus size={18} />
