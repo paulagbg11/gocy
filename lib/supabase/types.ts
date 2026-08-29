@@ -25,6 +25,7 @@ export interface TripDay {
   day_index: number;
   date: string;
   label: string | null;
+  completed: boolean;
 }
 
 export interface Category {

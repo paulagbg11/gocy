@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
-import { useTripDays } from "@/lib/queries/trips";
+import { useTripDays, useSetDayCompleted } from "@/lib/queries/trips";
 import { usePlaces } from "@/lib/queries/places";
 import { usePlaceDayLinks, useAssignPlaceToDay, nextOrderInDay } from "@/lib/queries/place-day-links";
 import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
@@ -15,12 +15,14 @@ import { AddPlaceToDaySheet } from "./AddPlaceToDaySheet";
 import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Button } from "@/components/ui/Button";
+import type { TripDay } from "@/lib/supabase/types";
 
 export function DaysScreen({ tripId }: { tripId: string }) {
   const { data: days = [] } = useTripDays(tripId);
   const { data: places = [] } = usePlaces(tripId);
   const { data: links = [] } = usePlaceDayLinks(tripId);
   const assign = useAssignPlaceToDay();
+  const setDayCompleted = useSetDayCompleted();
   const categoriesById = useCategoriesById();
 
   // undefined = todavía no se ha elegido nada explícitamente -> por defecto Día 1;
@@ -33,10 +35,15 @@ export function DaysScreen({ tripId }: { tripId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Día por defecto (mientras no se elija otro a mano): el primero que quede
+  // sin completar, para que al marcar el Día 1 la pantalla abra ya en el Día 2.
+  // Si están todos completados, se queda en el último.
+  const defaultDay = days.find((d) => !d.completed) ?? days[days.length - 1] ?? null;
+
   const showingUnassigned = selectedDayId === null || (selectedDayId === undefined && days.length === 0);
   const selectedDay = showingUnassigned
     ? null
-    : (days.find((d) => d.id === selectedDayId) ?? days[0] ?? null);
+    : (days.find((d) => d.id === selectedDayId) ?? defaultDay);
 
   const placesById = useMemo(() => new Map(places.map((p) => [p.id, p])), [places]);
 
@@ -57,12 +64,21 @@ export function DaysScreen({ tripId }: { tripId: string }) {
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const toggleCompleted = (day: TripDay) => {
+    const completed = !day.completed;
+    setDayCompleted.mutate({ dayId: day.id, tripId, completed });
+    // Al dar por terminado el día que estás viendo, vuelve al modo automático
+    // para que la pantalla salte sola al siguiente día pendiente.
+    if (completed && selectedDay?.id === day.id) setSelectedDayId(undefined);
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <DaySelector
         days={days}
         selectedDayId={showingUnassigned ? null : (selectedDay?.id ?? null)}
         onSelect={setSelectedDayId}
+        onToggleCompleted={toggleCompleted}
         unassignedCount={unassignedPlaces.length}
       />
 

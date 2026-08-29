@@ -45,6 +45,27 @@ export function useTripDays(tripId: string) {
   });
 }
 
+export function useSetDayCompleted() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      dayId,
+      tripId,
+      completed,
+    }: {
+      dayId: string;
+      tripId: string;
+      completed: boolean;
+    }) => {
+      const supabase = createClient();
+      const { error } = await supabase.from("trip_days").update({ completed }).eq("id", dayId);
+      if (error) throw error;
+      return tripId;
+    },
+    onSuccess: (tripId) => queryClient.invalidateQueries({ queryKey: ["trip_days", tripId] }),
+  });
+}
+
 /** Inserta/borra filas de trip_days para que coincidan con [start_date, end_date]. */
 async function syncTripDays(tripId: string, startDate: string, endDate: string) {
   const supabase = createClient();

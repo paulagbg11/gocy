@@ -46,7 +46,9 @@ export function DayMiniMap({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="h-48 shrink-0">
+      {/* El mapa ocupa ~60% del espacio disponible (antes era una franja fija
+          de 192px) y la lista el resto, que además hace scroll si hace falta. */}
+      <div className="flex-[3] min-h-[220px]">
         <MapProvider>
           <Map
             className="h-full w-full"
@@ -71,7 +73,7 @@ export function DayMiniMap({
         </MapProvider>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-2 px-4 py-3">
+      <div className="flex-[2] min-h-0 overflow-y-auto flex flex-col gap-2 px-4 py-3">
         {sorted.length === 0 && (
           <p className="text-sm text-muted-foreground">Nada asignado a este día todavía.</p>
         )}
