@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Map } from "@vis.gl/react-google-maps";
 import { usePlaces } from "@/lib/queries/places";
-import { CATEGORY_META, CATEGORY_ORDER } from "@/lib/categories";
+import { useVisibleCategories } from "@/lib/queries/categories";
 import { MapProvider } from "./MapProvider";
 import { CategoryPin } from "./CategoryPin";
 import { FitBounds } from "./FitBounds";
@@ -14,31 +14,36 @@ import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
 import { PlaceForm } from "@/components/places/PlaceForm";
 import { Sheet } from "@/components/ui/Sheet";
 import { Chip } from "@/components/ui/Chip";
-import type { PlaceCategory } from "@/lib/supabase/types";
 
 // Centro por defecto (Madrid) mientras no hay pines o no se ha resuelto la ubicación.
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 
 export function MapScreen({ tripId }: { tripId: string }) {
   const { data: places = [] } = usePlaces(tripId);
+  const visibleCategories = useVisibleCategories(tripId);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [activeCategories, setActiveCategories] = useState<Set<PlaceCategory>>(
-    new Set(CATEGORY_ORDER),
-  );
+  const [deselected, setDeselected] = useState<Set<string>>(new Set());
   const [pendingPlace, setPendingPlace] = useState<SelectedPlace | null>(null);
 
-  const filtered = useMemo(
-    () => places.filter((p) => activeCategories.has(p.category)),
-    [places, activeCategories],
+  // `Map` aquí es el componente de @vis.gl/react-google-maps (importado más
+  // arriba), así que usamos globalThis.Map para el Map de JS.
+  const categoriesById = useMemo(
+    () => new globalThis.Map(visibleCategories.map((c) => [c.id, c] as const)),
+    [visibleCategories],
   );
 
-  const toggleCategory = (cat: PlaceCategory) => {
-    setActiveCategories((prev) => {
+  const filtered = useMemo(
+    () => places.filter((p) => categoriesById.has(p.category_id) && !deselected.has(p.category_id)),
+    [places, categoriesById, deselected],
+  );
+
+  const toggleCategory = (categoryId: string) => {
+    setDeselected((prev) => {
       const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
       return next;
     });
   };
@@ -63,7 +68,12 @@ export function MapScreen({ tripId }: { tripId: string }) {
           <MapResizeFix />
           <FitBounds points={filtered.map((p) => ({ lat: p.lat, lng: p.lng }))} />
           {filtered.map((place) => (
-            <CategoryPin key={place.id} place={place} onClick={() => openPlace(place.id)} />
+            <CategoryPin
+              key={place.id}
+              place={place}
+              category={categoriesById.get(place.category_id)}
+              onClick={() => openPlace(place.id)}
+            />
           ))}
         </Map>
 
@@ -72,14 +82,14 @@ export function MapScreen({ tripId }: { tripId: string }) {
             <PlaceSearchBox onSelect={setPendingPlace} />
           </div>
           <div className="pointer-events-auto flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-            {CATEGORY_ORDER.map((cat) => (
+            {visibleCategories.map((cat) => (
               <Chip
-                key={cat}
-                active={activeCategories.has(cat)}
-                color={CATEGORY_META[cat].color}
-                onClick={() => toggleCategory(cat)}
+                key={cat.id}
+                active={!deselected.has(cat.id)}
+                color={cat.color}
+                onClick={() => toggleCategory(cat.id)}
               >
-                {CATEGORY_META[cat].label}
+                {cat.emoji} {cat.name}
               </Chip>
             ))}
           </div>

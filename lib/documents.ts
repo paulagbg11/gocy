@@ -1,5 +1,7 @@
 import { z } from "zod";
-import type { DocumentType } from "./supabase/types";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import type { DocumentDetails, DocumentType } from "./supabase/types";
 
 export const DOCUMENT_TYPE_LABEL: Record<DocumentType, string> = {
   flight: "Vuelo",
@@ -7,6 +9,26 @@ export const DOCUMENT_TYPE_LABEL: Record<DocumentType, string> = {
   reservation: "Reserva",
   note: "Nota",
 };
+
+const EVENT_TIME_FIELD: Record<DocumentType, string | null> = {
+  flight: "departure_time",
+  lodging: "check_in",
+  reservation: "date_time",
+  note: null,
+};
+
+/** Fecha/hora del campo "datetime-local" relevante según el tipo de documento, ya formateada. */
+export function documentEventTime(type: DocumentType, details: DocumentDetails): string | null {
+  const field = EVENT_TIME_FIELD[type];
+  if (!field) return null;
+  const raw = (details as Record<string, unknown>)[field];
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    return format(parseISO(raw), "d MMM, HH:mm", { locale: es });
+  } catch {
+    return null;
+  }
+}
 
 export const flightDetailsSchema = z.object({
   airline: z.string().optional(),

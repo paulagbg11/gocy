@@ -1,6 +1,7 @@
 "use client";
 
-import { CATEGORY_META } from "@/lib/categories";
+import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
+import { useCategoriesById } from "@/lib/queries/categories";
 import { useUpdatePlaceDayLink, useUnassignPlaceFromDay } from "@/lib/queries/place-day-links";
 import { X } from "lucide-react";
 import type { Place, PlaceDayLink, TripDay } from "@/lib/supabase/types";
@@ -23,6 +24,7 @@ export function TimelineView({
 }) {
   const updateLink = useUpdatePlaceDayLink();
   const unassign = useUnassignPlaceFromDay();
+  const categoriesById = useCategoriesById();
 
   const sorted = [...entries].sort((a, b) => {
     if (a.link.scheduled_at && b.link.scheduled_at) return a.link.scheduled_at.localeCompare(b.link.scheduled_at);
@@ -47,8 +49,9 @@ export function TimelineView({
   return (
     <div className="flex flex-col gap-2 px-4">
       {sorted.map(({ link, place }) => {
-        const meta = CATEGORY_META[place.category];
-        const Icon = meta.icon;
+        const category = categoriesById.get(place.category_id);
+        const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
+        const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
         const timeValue = link.scheduled_at
           ? new Date(link.scheduled_at).toISOString().slice(11, 16)
           : "";
@@ -65,9 +68,9 @@ export function TimelineView({
             />
             <span
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-              style={{ background: meta.color }}
+              style={{ background: color }}
             >
-              <Icon size={16} className="text-white" />
+              {emoji}
             </span>
             <button
               onClick={() => onOpenPlace(place.id)}

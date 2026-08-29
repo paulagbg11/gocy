@@ -6,6 +6,7 @@ import { CategoryPin } from "@/components/map/CategoryPin";
 import { RoutePolyline } from "@/components/map/RoutePolyline";
 import { FitBounds } from "@/components/map/FitBounds";
 import { MapResizeFix } from "@/components/map/MapResizeFix";
+import { useCategoriesById } from "@/lib/queries/categories";
 import { DayPlaceRow } from "./DayPlaceRow";
 import { useUpdatePlaceDayLink, useUnassignPlaceFromDay } from "@/lib/queries/place-day-links";
 import type { Place, PlaceDayLink } from "@/lib/supabase/types";
@@ -28,6 +29,7 @@ export function DayMiniMap({
 }) {
   const updateLink = useUpdatePlaceDayLink();
   const unassign = useUnassignPlaceFromDay();
+  const categoriesById = useCategoriesById();
   const sorted = [...entries].sort(
     (a, b) => (a.link.order_in_day ?? 0) - (b.link.order_in_day ?? 0),
   );
@@ -57,7 +59,13 @@ export function DayMiniMap({
             <FitBounds points={sorted.map(({ place }) => ({ lat: place.lat, lng: place.lng }))} />
             <RoutePolyline path={sorted.map(({ place }) => ({ lat: place.lat, lng: place.lng }))} />
             {sorted.map(({ place }, i) => (
-              <CategoryPin key={place.id} place={place} order={i + 1} onClick={() => onOpenPlace(place.id)} />
+              <CategoryPin
+                key={place.id}
+                place={place}
+                category={categoriesById.get(place.category_id)}
+                order={i + 1}
+                onClick={() => onOpenPlace(place.id)}
+              />
             ))}
           </Map>
         </MapProvider>

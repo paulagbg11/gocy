@@ -126,6 +126,28 @@ export function useUpdateTrip() {
   });
 }
 
+export function useUploadTripCover() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ tripId, file }: { tripId: string; file: File }) => {
+      const supabase = createClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${tripId}/cover-${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("trip-covers").upload(path, file, {
+        upsert: true,
+      });
+      if (uploadError) throw uploadError;
+      const { error } = await supabase.from("trips").update({ cover_image_path: path }).eq("id", tripId);
+      if (error) throw error;
+      return path;
+    },
+    onSuccess: (_path, { tripId }) => {
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
+    },
+  });
+}
+
 export function useDeleteTrip() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { CATEGORY_META } from "@/lib/categories";
+import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
+import { useCategoriesById } from "@/lib/queries/categories";
 import { useAssignPlaceToDay, nextOrderInDay } from "@/lib/queries/place-day-links";
 import { Sheet } from "@/components/ui/Sheet";
 import type { Place, PlaceDayLink, TripDay } from "@/lib/supabase/types";
@@ -17,6 +18,7 @@ interface AddPlaceToDaySheetProps {
 
 export function AddPlaceToDaySheet({ open, onClose, tripId, day, places, links }: AddPlaceToDaySheetProps) {
   const assign = useAssignPlaceToDay();
+  const categoriesById = useCategoriesById();
 
   const linksByPlace = useMemo(() => {
     const map = new Map<string, PlaceDayLink[]>();
@@ -57,8 +59,9 @@ export function AddPlaceToDaySheet({ open, onClose, tripId, day, places, links }
       ) : (
         <div className="flex flex-col gap-1.5 max-h-[55vh] overflow-y-auto">
           {places.map((place) => {
-            const meta = CATEGORY_META[place.category];
-            const Icon = meta.icon;
+            const category = categoriesById.get(place.category_id);
+            const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
+            const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
             const repeated = (linksByPlace.get(place.id)?.length ?? 0) > 0;
             return (
               <button
@@ -68,9 +71,9 @@ export function AddPlaceToDaySheet({ open, onClose, tripId, day, places, links }
               >
                 <span
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: meta.color }}
+                  style={{ background: color }}
                 >
-                  <Icon size={16} className="text-white" />
+                  {emoji}
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block truncate text-sm font-medium">{place.name}</span>

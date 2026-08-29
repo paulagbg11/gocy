@@ -1,13 +1,3 @@
-export type PlaceCategory =
-  | "airport"
-  | "lodging"
-  | "restaurant"
-  | "cafe"
-  | "landmark"
-  | "activity"
-  | "shopping"
-  | "other";
-
 export type DocumentType = "flight" | "lodging" | "reservation" | "note";
 
 export interface Profile {
@@ -37,11 +27,26 @@ export interface TripDay {
   label: string | null;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  is_builtin: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TripHiddenCategory {
+  trip_id: string;
+  category_id: string;
+}
+
 export interface Place {
   id: string;
   trip_id: string;
   name: string;
-  category: PlaceCategory;
+  category_id: string;
   lat: number;
   lng: number;
   address: string | null;
@@ -110,18 +115,4 @@ export interface Attachment {
   mime_type: string | null;
   size_bytes: number | null;
   created_at: string;
-}
-
-export interface Database {
-  public: {
-    Tables: {
-      profiles: { Row: Profile; Insert: Partial<Profile> & { name: string }; Update: Partial<Profile> };
-      trips: { Row: Trip; Insert: Partial<Trip> & { name: string; start_date: string; end_date: string }; Update: Partial<Trip> };
-      trip_days: { Row: TripDay; Insert: Partial<TripDay> & { trip_id: string; day_index: number; date: string }; Update: Partial<TripDay> };
-      places: { Row: Place; Insert: Partial<Place> & { trip_id: string; name: string; lat: number; lng: number }; Update: Partial<Place> };
-      place_day_links: { Row: PlaceDayLink; Insert: Partial<PlaceDayLink> & { trip_id: string; place_id: string; day_id: string }; Update: Partial<PlaceDayLink> };
-      documents: { Row: TripDocument; Insert: Partial<TripDocument> & { trip_id: string; type: DocumentType; title: string }; Update: Partial<TripDocument> };
-      attachments: { Row: Attachment; Insert: Partial<Attachment> & { document_id: string; storage_path: string }; Update: Partial<Attachment> };
-    };
-  };
 }

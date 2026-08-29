@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Plane, BedDouble, CalendarCheck, StickyNote } from "lucide-react";
-import { DOCUMENT_TYPE_LABEL } from "@/lib/documents";
+import { Plane, BedDouble, CalendarCheck, StickyNote, Clock } from "lucide-react";
+import { DOCUMENT_TYPE_LABEL, documentEventTime } from "@/lib/documents";
 import type { DocumentType, TripDocument } from "@/lib/supabase/types";
 
 const TYPE_ICON: Record<DocumentType, typeof Plane> = {
@@ -12,6 +12,8 @@ const TYPE_ICON: Record<DocumentType, typeof Plane> = {
 
 export function DocumentCard({ tripId, document }: { tripId: string; document: TripDocument }) {
   const Icon = TYPE_ICON[document.type];
+  const eventTime = documentEventTime(document.type, document.details);
+
   return (
     <Link
       href={`/trips/${tripId}/docs/${document.id}`}
@@ -24,6 +26,12 @@ export function DocumentCard({ tripId, document }: { tripId: string; document: T
         <span className="block truncate text-sm font-medium">{document.title}</span>
         <span className="block text-xs text-muted-foreground">{DOCUMENT_TYPE_LABEL[document.type]}</span>
       </span>
+      {eventTime && (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+          <Clock size={12} />
+          {eventTime}
+        </span>
+      )}
     </Link>
   );
 }

@@ -70,6 +70,19 @@ export function useTripRealtime(tripId: string) {
         { event: "*", schema: "public", table: "trip_days", filter: `trip_id=eq.${tripId}` },
         (payload) => patchListCache(queryClient, ["trip_days", tripId], payload),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "trip_hidden_categories", filter: `trip_id=eq.${tripId}` },
+        (payload) => patchListCache(queryClient, ["trip_hidden_categories", tripId], payload),
+      )
+      // categories es global (sin trip_id), así que aquí solo invalidamos en
+      // vez de parchear a mano: patchListCache necesita trip_id=eq. en el
+      // filtro y no aplica a una tabla global.
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "categories" },
+        () => queryClient.invalidateQueries({ queryKey: ["categories"] }),
+      )
       .subscribe();
 
     const refetchOnResume = () => {
@@ -78,6 +91,8 @@ export function useTripRealtime(tripId: string) {
         queryClient.invalidateQueries({ queryKey: ["place_day_links", tripId] });
         queryClient.invalidateQueries({ queryKey: ["documents", tripId] });
         queryClient.invalidateQueries({ queryKey: ["trip_days", tripId] });
+        queryClient.invalidateQueries({ queryKey: ["trip_hidden_categories", tripId] });
+        queryClient.invalidateQueries({ queryKey: ["categories"] });
       }
     };
     document.addEventListener("visibilitychange", refetchOnResume);

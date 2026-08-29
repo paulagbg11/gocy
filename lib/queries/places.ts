@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { Place, PlaceCategory } from "@/lib/supabase/types";
+import type { Place } from "@/lib/supabase/types";
 
 export function usePlaces(tripId: string) {
   return useQuery({
@@ -22,7 +22,7 @@ export function usePlaces(tripId: string) {
 interface CreatePlaceInput {
   trip_id: string;
   name: string;
-  category: PlaceCategory;
+  category_id: string;
   lat: number;
   lng: number;
   address?: string | null;
@@ -48,7 +48,7 @@ interface UpdatePlaceInput {
   id: string;
   trip_id: string;
   name?: string;
-  category?: PlaceCategory;
+  category_id?: string;
   address?: string | null;
   notes?: string | null;
 }

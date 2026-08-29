@@ -2,18 +2,19 @@
 
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { CATEGORY_META, CATEGORY_ORDER } from "@/lib/categories";
+import { useVisibleCategories } from "@/lib/queries/categories";
 import { useCreatePlace, useUpdatePlace, useDeletePlace } from "@/lib/queries/places";
 import { useProfile } from "@/components/profile/ProfileProvider";
+import { AddCategoryInline } from "@/components/categories/AddCategoryInline";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
-import type { Place, PlaceCategory } from "@/lib/supabase/types";
+import type { Place } from "@/lib/supabase/types";
 import type { SelectedPlace } from "@/components/map/PlaceSearchBox";
 
 interface FormValues {
   name: string;
-  category: PlaceCategory;
+  category_id: string;
   notes: string;
 }
 
@@ -29,12 +30,13 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProp
   const createPlace = useCreatePlace();
   const updatePlace = useUpdatePlace();
   const deletePlace = useDeletePlace();
+  const visibleCategories = useVisibleCategories(tripId);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, formState: { isSubmitting } } = useForm<FormValues>({
     defaultValues: {
       name: editing?.name ?? fromSearch?.name ?? "",
-      category: editing?.category ?? "other",
+      category_id: editing?.category_id ?? "",
       notes: editing?.notes ?? "",
     },
   });
@@ -42,6 +44,10 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProp
   const address = editing?.address ?? fromSearch?.address ?? null;
 
   const onSubmit = async (values: FormValues) => {
+    if (!values.category_id) {
+      setServerError("Elige una categoría");
+      return;
+    }
     setServerError(null);
     try {
       if (editing) {
@@ -50,7 +56,7 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProp
         await createPlace.mutateAsync({
           trip_id: tripId,
           name: values.name,
-          category: values.category,
+          category_id: values.category_id,
           notes: values.notes || null,
           lat: fromSearch.lat,
           lng: fromSearch.lng,
@@ -84,20 +90,21 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProp
         <Label>Categoría</Label>
         <Controller
           control={control}
-          name="category"
+          name="category_id"
           render={({ field }) => (
             <div className="flex flex-wrap gap-2">
-              {CATEGORY_ORDER.map((cat) => (
+              {visibleCategories.map((cat) => (
                 <Chip
-                  key={cat}
+                  key={cat.id}
                   type="button"
-                  active={field.value === cat}
-                  color={CATEGORY_META[cat].color}
-                  onClick={() => field.onChange(cat)}
+                  active={field.value === cat.id}
+                  color={cat.color}
+                  onClick={() => field.onChange(cat.id)}
                 >
-                  {CATEGORY_META[cat].label}
+                  {cat.emoji} {cat.name}
                 </Chip>
               ))}
+              <AddCategoryInline onCreated={(cat) => field.onChange(cat.id)} />
             </div>
           )}
         />

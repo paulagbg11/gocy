@@ -1,11 +1,13 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { useTrip, useUpdateTrip, useDeleteTrip } from "@/lib/queries/trips";
+import { ArrowLeft, ImagePlus } from "lucide-react";
+import { useTrip, useUpdateTrip, useDeleteTrip, useUploadTripCover } from "@/lib/queries/trips";
 import { useProfile } from "@/components/profile/ProfileProvider";
+import { createClient } from "@/lib/supabase/client";
+import { CategoryManager } from "@/components/settings/CategoryManager";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -14,8 +16,10 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
   const { data: trip } = useTrip(tripId);
   const updateTrip = useUpdateTrip();
   const deleteTrip = useDeleteTrip();
+  const uploadCover = useUploadTripCover();
   const { profiles, renameProfile } = useProfile();
   const router = useRouter();
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({ name: "", destination: "", startDate: "", endDate: "" });
   const [saving, setSaving] = useState(false);
@@ -66,6 +70,48 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
 
       <div className="flex flex-col gap-4">
         <div>
+          <Label>Portada</Label>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadCover.mutate({ tripId, file });
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => coverInputRef.current?.click()}
+            disabled={uploadCover.isPending}
+            className="flex h-28 w-full items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-surface-2 bg-cover bg-center text-muted-foreground transition-colors duration-150 ease-out hover:brightness-95"
+            style={
+              trip?.cover_image_path
+                ? {
+                    backgroundImage: `url(${
+                      createClient().storage.from("trip-covers").getPublicUrl(trip.cover_image_path)
+                        .data.publicUrl
+                    })`,
+                  }
+                : undefined
+            }
+          >
+            {!trip?.cover_image_path && (
+              <span className="flex flex-col items-center gap-1 text-sm">
+                {uploadCover.isPending ? (
+                  "Subiendo…"
+                ) : (
+                  <>
+                    <ImagePlus size={20} /> Añadir foto
+                  </>
+                )}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div>
           <Label htmlFor="name">Nombre</Label>
           <Input
             id="name"
@@ -106,6 +152,11 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
           {saving ? "Guardando…" : "Guardar cambios"}
         </Button>
       </div>
+
+      <hr className="my-6 border-border" />
+
+      <h2 className="text-sm font-medium text-muted-foreground mb-3">Categorías</h2>
+      <CategoryManager tripId={tripId} />
 
       <hr className="my-6 border-border" />
 

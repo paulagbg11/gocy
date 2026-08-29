@@ -1,7 +1,8 @@
 "use client";
 
 import { ChevronUp, ChevronDown, X, Clock } from "lucide-react";
-import { CATEGORY_META } from "@/lib/categories";
+import { useCategoriesById } from "@/lib/queries/categories";
+import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
 import type { Place } from "@/lib/supabase/types";
 
 interface DayPlaceRowProps {
@@ -23,8 +24,9 @@ export function DayPlaceRow({
   onMoveUp,
   onMoveDown,
 }: DayPlaceRowProps) {
-  const meta = CATEGORY_META[place.category];
-  const Icon = meta.icon;
+  const category = useCategoriesById().get(place.category_id);
+  const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
+  const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
 
   return (
     <div className="flex items-center gap-3 rounded-[var(--radius-sm)] bg-surface px-3 py-2.5 shadow-[var(--shadow-sm)]">
@@ -49,13 +51,13 @@ export function DayPlaceRow({
 
       <span
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-        style={{ background: meta.color }}
+        style={{ background: color }}
       >
         {order}
       </span>
 
       <button onClick={onOpen} className="flex-1 flex items-center gap-2 min-w-0 text-left">
-        <Icon size={16} className="shrink-0 text-muted-foreground" />
+        <span className="shrink-0">{emoji}</span>
         <span className="truncate text-sm font-medium">{place.name}</span>
       </button>
 

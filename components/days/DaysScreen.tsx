@@ -6,7 +6,8 @@ import { Plus } from "lucide-react";
 import { useTripDays } from "@/lib/queries/trips";
 import { usePlaces } from "@/lib/queries/places";
 import { usePlaceDayLinks, useAssignPlaceToDay, nextOrderInDay } from "@/lib/queries/place-day-links";
-import { CATEGORY_META } from "@/lib/categories";
+import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
+import { useCategoriesById } from "@/lib/queries/categories";
 import { DaySelector } from "./DaySelector";
 import { DayMiniMap } from "./DayMiniMap";
 import { TimelineView } from "./TimelineView";
@@ -20,6 +21,7 @@ export function DaysScreen({ tripId }: { tripId: string }) {
   const { data: places = [] } = usePlaces(tripId);
   const { data: links = [] } = usePlaceDayLinks(tripId);
   const assign = useAssignPlaceToDay();
+  const categoriesById = useCategoriesById();
 
   // undefined = todavía no se ha elegido nada explícitamente -> por defecto Día 1;
   // null = el usuario ha elegido explícitamente "Por decidir".
@@ -111,8 +113,9 @@ export function DaysScreen({ tripId }: { tripId: string }) {
           </p>
           <div className="flex flex-col gap-1.5">
             {unassignedPlaces.map((place) => {
-              const meta = CATEGORY_META[place.category];
-              const Icon = meta.icon;
+              const category = categoriesById.get(place.category_id);
+              const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
+              const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
               return (
                 <div
                   key={place.id}
@@ -120,9 +123,9 @@ export function DaysScreen({ tripId }: { tripId: string }) {
                 >
                   <span
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: meta.color }}
+                    style={{ background: color }}
                   >
-                    <Icon size={16} className="text-white" />
+                    {emoji}
                   </span>
                   <button
                     onClick={() => openPlace(place.id)}
