@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Planifica vuestros viajes juntos: mapa, días y reservas.",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf8f4",
-    theme_color: "#faf8f4",
+    background_color: "#f6f8f9",
+    theme_color: "#f6f8f9",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },

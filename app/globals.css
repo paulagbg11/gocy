@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf8f4;
+  --background: #f6f8f9;
   --surface: #ffffff;
-  --surface-2: #f3efe8;
-  --foreground: #2a251e;
-  --muted-foreground: #7d7264;
-  --border: rgba(42, 37, 30, 0.1);
-  --accent: #b85c3e;
-  --accent-hover: #a04f34;
-  --accent-foreground: #fff8f4;
-  --danger: #b23b3b;
-  --shadow-sm: 0 1px 2px rgba(30, 24, 15, 0.05), 0 1px 1px rgba(30, 24, 15, 0.04);
-  --shadow-md: 0 8px 24px rgba(30, 24, 15, 0.1), 0 2px 6px rgba(30, 24, 15, 0.06);
+  --surface-2: #e9eff1;
+  --foreground: #1f2a2e;
+  --muted-foreground: #647880;
+  --border: rgba(31, 42, 46, 0.1);
+  --accent: #2f6f7e;
+  --accent-hover: #275d6b;
+  --accent-foreground: #f2fafb;
+  --danger: #b1403c;
+  --shadow-sm: 0 1px 2px rgba(15, 32, 38, 0.05), 0 1px 1px rgba(15, 32, 38, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 32, 38, 0.1), 0 2px 6px rgba(15, 32, 38, 0.06);
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 22px;
@@ -37,15 +37,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #1a1712;
-    --surface: #221e17;
-    --surface-2: #2a251d;
-    --foreground: #f1ebe0;
-    --muted-foreground: #a99d8b;
-    --border: rgba(241, 235, 224, 0.1);
-    --accent: #d97a55;
-    --accent-hover: #e58a63;
-    --accent-foreground: #201409;
+    --background: #12191c;
+    --surface: #182126;
+    --surface-2: #1f2b30;
+    --foreground: #e8eef0;
+    --muted-foreground: #93a5ab;
+    --border: rgba(232, 238, 240, 0.11);
+    /* Teal más claro que en modo claro: el #2f6f7e no contrasta lo suficiente
+       sobre fondo oscuro. */
+    --accent: #56a7b8;
+    --accent-hover: #6bb8c8;
+    --accent-foreground: #06181d;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.24);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
   }
