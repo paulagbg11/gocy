@@ -17,6 +17,12 @@
 /.next/
 /out/
 
+# serwist (service worker generado en build)
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
+/public/swe-worker-*.js.map
+
 # production
 /build
 
@@ -32,6 +38,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel
