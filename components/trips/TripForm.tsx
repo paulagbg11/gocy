@@ -9,7 +9,6 @@ import { ImagePlus } from "lucide-react";
 import { useCreateTrip, useUploadTripCover } from "@/lib/queries/trips";
 import { useProfile } from "@/components/profile/ProfileProvider";
 import { Input, Label, Textarea } from "@/components/ui/Input";
-import { DateField } from "@/components/ui/DateField";
 import { Button } from "@/components/ui/Button";
 
 const schema = z
@@ -103,12 +102,12 @@ export function TripForm() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 min-w-0">
           <Label htmlFor="start_date">Llegada</Label>
-          <DateField id="start_date" {...register("start_date")} />
+          <Input id="start_date" type="date" {...register("start_date")} />
           {errors.start_date && <p className="text-xs text-danger mt-1">{errors.start_date.message}</p>}
         </div>
         <div className="flex-1 min-w-0">
           <Label htmlFor="end_date">Salida</Label>
-          <DateField id="end_date" {...register("end_date")} />
+          <Input id="end_date" type="date" {...register("end_date")} />
           {errors.end_date && <p className="text-xs text-danger mt-1">{errors.end_date.message}</p>}
         </div>
       </div>

@@ -11,6 +11,12 @@ interface TimelineEntry {
   place: Place;
 }
 
+/** "HH:mm" en hora local, para el value de un <input type="time">. */
+function toLocalTimeValue(isoString: string): string {
+  const d = new Date(isoString);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export function TimelineView({
   entries,
   day,
@@ -52,9 +58,12 @@ export function TimelineView({
         const category = categoriesById.get(place.category_id);
         const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
         const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
-        const timeValue = link.scheduled_at
-          ? new Date(link.scheduled_at).toISOString().slice(11, 16)
-          : "";
+        // Hora local, NO toISOString(): setTime guarda convirtiendo de local a
+        // UTC, así que hay que deshacer esa conversión al leer o la hora que
+        // escribes se muestra desplazada (14:00 -> 12:00 en horario de verano
+        // peninsular). DayPlaceRow ya usa hora local, así que además las dos
+        // vistas del mismo día se contradecían.
+        const timeValue = link.scheduled_at ? toLocalTimeValue(link.scheduled_at) : "";
         return (
           <div
             key={link.id}

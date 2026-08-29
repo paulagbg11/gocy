@@ -80,6 +80,7 @@ export function DayMiniMap({
             key={link.id}
             place={place}
             order={i + 1}
+            scheduledAt={link.scheduled_at}
             onOpen={() => onOpenPlace(place.id)}
             onRemove={() => unassign.mutate({ id: link.id, trip_id: tripId })}
             onMoveUp={i > 0 ? () => swap(i, i - 1) : undefined}

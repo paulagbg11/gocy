@@ -14,7 +14,7 @@ export default function DocumentDetailPage({
   const { data: document, isLoading } = useDocument(docId);
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 max-w-md mx-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 max-w-md mx-auto w-full">
       <Link
         href={`/trips/${tripId}/docs`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 w-fit"

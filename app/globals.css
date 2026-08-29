@@ -59,11 +59,54 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
-  /* Red de seguridad: un <input type="date"/datetime-local"> nativo en iOS
-     Safari puede pedir más ancho del que se le da y desbordar la página.
-     Las filas con scroll horizontal a propósito (chips, etc.) usan su propio
-     overflow-x-auto en un contenedor interno y no se ven afectadas por esto. */
+  /* Red de seguridad: nada debe poder crear scroll horizontal de página.
+     Las filas con scroll horizontal a propósito (chips, selector de días)
+     tienen su propio overflow-x-auto en un contenedor interno, así que no
+     se ven afectadas por esto. */
   overflow-x: hidden;
+}
+
+/* CAUSA RAÍZ del desbordamiento de los campos de fecha en móvil:
+   en iOS Safari, <input type="date|time|datetime-local"> es un control
+   nativo con un ANCHO INTRÍNSECO PROPIO (el que necesita su widget interno)
+   que gana sobre `width: 100%`. Por eso el campo se pintaba más ancho que
+   el resto del formulario y se salía de la pantalla.
+
+   `appearance: none` desactiva ese dimensionado nativo y hace que el input
+   se comporte como uno de texto normal; `min-width: 0` evita que el
+   contenido interno vuelva a imponer un mínimo, y los pseudo-elementos
+   ::-webkit-* hacen lo propio con el contenido del widget (que si no,
+   reintroduce el ancho por dentro). */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+  margin: 0;
+}
+
+input::-webkit-datetime-edit,
+input::-webkit-datetime-edit-fields-wrapper {
+  min-width: 0;
+  padding: 0;
+}
+
+/* appearance:none esconde el icono del calendario en navegadores basados en
+   Chromium; lo volvemos a mostrar (en iOS este selector no aplica). */
+input::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  cursor: pointer;
 }
 
 :focus-visible {

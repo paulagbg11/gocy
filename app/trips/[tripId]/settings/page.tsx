@@ -9,7 +9,6 @@ import { useProfile } from "@/components/profile/ProfileProvider";
 import { createClient } from "@/lib/supabase/client";
 import { CategoryManager } from "@/components/settings/CategoryManager";
 import { Input, Label, Textarea } from "@/components/ui/Input";
-import { DateField } from "@/components/ui/DateField";
 import { Button } from "@/components/ui/Button";
 
 export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/settings">) {
@@ -60,7 +59,7 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
   };
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 max-w-md mx-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 max-w-md mx-auto w-full">
       <Link
         href={`/trips/${tripId}/map`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 w-fit"
@@ -132,16 +131,18 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 min-w-0">
             <Label htmlFor="start_date">Llegada</Label>
-            <DateField
+            <Input
               id="start_date"
+              type="date"
               value={form.startDate}
               onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
             />
           </div>
           <div className="flex-1 min-w-0">
             <Label htmlFor="end_date">Salida</Label>
-            <DateField
+            <Input
               id="end_date"
+              type="date"
               value={form.endDate}
               onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
             />

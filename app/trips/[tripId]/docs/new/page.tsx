@@ -8,7 +8,7 @@ import { DocumentForm } from "@/components/docs/DocumentForm";
 export default function NewDocumentPage({ params }: PageProps<"/trips/[tripId]/docs/new">) {
   const { tripId } = use(params);
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 max-w-md mx-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 max-w-md mx-auto w-full">
       <Link
         href={`/trips/${tripId}/docs`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 w-fit"
