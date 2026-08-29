@@ -129,22 +129,24 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
           />
         </div>
         <div className="flex gap-3">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <Label htmlFor="start_date">Llegada</Label>
             <Input
               id="start_date"
               type="date"
               value={form.startDate}
               onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+              className="w-full min-w-0"
             />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <Label htmlFor="end_date">Salida</Label>
             <Input
               id="end_date"
               type="date"
               value={form.endDate}
               onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+              className="w-full min-w-0"
             />
           </div>
         </div>

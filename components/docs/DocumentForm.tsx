@@ -35,6 +35,47 @@ const FIELDS_BY_TYPE: Record<DocumentType, { key: string; label: string; type?: 
   note: [],
 };
 
+// input type="datetime-local" se renderiza demasiado ancho en iOS Safari y
+// provoca scroll horizontal en la pantalla — se guarda igualmente como un
+// único "YYYY-MM-DDTHH:mm" en `details`, pero se edita como dos campos
+// nativos (fecha y hora) más estrechos y fiables en móvil.
+function DateTimeField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [datePart, timePart] = value ? value.split("T") : ["", ""];
+
+  const update = (nextDate: string, nextTime: string) => {
+    if (!nextDate && !nextTime) return onChange("");
+    onChange(`${nextDate}T${nextTime || "00:00"}`);
+  };
+
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="flex gap-2">
+        <Input
+          type="date"
+          value={datePart}
+          onChange={(e) => update(e.target.value, timePart)}
+          className="flex-1 !w-auto min-w-0"
+        />
+        <Input
+          type="time"
+          value={timePart}
+          onChange={(e) => update(datePart, e.target.value)}
+          className="!w-28 min-w-0 shrink-0"
+        />
+      </div>
+    </div>
+  );
+}
+
 interface DocumentFormProps {
   tripId: string;
   editing?: TripDocument;
@@ -125,17 +166,26 @@ export function DocumentForm({ tripId, editing, onSaved }: DocumentFormProps) {
         />
       </div>
 
-      {FIELDS_BY_TYPE[type].map((field) => (
-        <div key={field.key}>
-          <Label htmlFor={field.key}>{field.label}</Label>
-          <Input
-            id={field.key}
-            type={field.type ?? "text"}
+      {FIELDS_BY_TYPE[type].map((field) =>
+        field.type === "datetime-local" ? (
+          <DateTimeField
+            key={field.key}
+            label={field.label}
             value={details[field.key] ?? ""}
-            onChange={(e) => setField(field.key, e.target.value)}
+            onChange={(v) => setField(field.key, v)}
           />
-        </div>
-      ))}
+        ) : (
+          <div key={field.key}>
+            <Label htmlFor={field.key}>{field.label}</Label>
+            <Input
+              id={field.key}
+              type={field.type ?? "text"}
+              value={details[field.key] ?? ""}
+              onChange={(e) => setField(field.key, e.target.value)}
+            />
+          </div>
+        ),
+      )}
 
       <div>
         <Label htmlFor="notes">Notas</Label>

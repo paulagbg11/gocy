@@ -59,6 +59,11 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  /* Red de seguridad: un <input type="date"/datetime-local"> nativo en iOS
+     Safari puede pedir más ancho del que se le da y desbordar la página.
+     Las filas con scroll horizontal a propósito (chips, etc.) usan su propio
+     overflow-x-auto en un contenedor interno y no se ven afectadas por esto. */
+  overflow-x: hidden;
 }
 
 :focus-visible {

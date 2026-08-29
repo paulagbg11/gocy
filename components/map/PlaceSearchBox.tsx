@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Search } from "lucide-react";
-import { useMapsLibrary } from "@vis.gl/react-google-maps";
+import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { Input } from "@/components/ui/Input";
 
 export interface SelectedPlace {
@@ -14,6 +14,7 @@ export interface SelectedPlace {
 }
 
 export function PlaceSearchBox({ onSelect }: { onSelect: (place: SelectedPlace) => void }) {
+  const map = useMap();
   const placesLib = useMapsLibrary("places");
   const inputRef = useRef<HTMLInputElement>(null);
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
@@ -28,6 +29,21 @@ export function PlaceSearchBox({ onSelect }: { onSelect: (place: SelectedPlace) 
       google.maps.event.clearInstanceListeners(ac);
     };
   }, [placesLib]);
+
+  // Sesga los resultados hacia la zona que se está viendo en el mapa (así
+  // buscar "Plaza" en un viaje a Sevilla no devuelve una plaza de México) sin
+  // excluir del todo resultados de fuera, por si buscas algo camino al
+  // aeropuerto o en otra ciudad cercana.
+  useEffect(() => {
+    if (!autocomplete || !map) return;
+    const biasToView = () => {
+      const bounds = map.getBounds();
+      if (bounds) autocomplete.setBounds(bounds);
+    };
+    biasToView();
+    const listener = map.addListener("bounds_changed", biasToView);
+    return () => listener.remove();
+  }, [autocomplete, map]);
 
   const handleSelect = useCallback(() => {
     if (!autocomplete) return;

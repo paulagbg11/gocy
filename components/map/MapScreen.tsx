@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Map } from "@vis.gl/react-google-maps";
 import { usePlaces } from "@/lib/queries/places";
+import { useTrip } from "@/lib/queries/trips";
 import { useVisibleCategories } from "@/lib/queries/categories";
 import { MapProvider } from "./MapProvider";
 import { CategoryPin } from "./CategoryPin";
 import { FitBounds } from "./FitBounds";
 import { MapResizeFix } from "./MapResizeFix";
+import { DestinationCenter } from "./DestinationCenter";
 import { PlaceSearchBox, type SelectedPlace } from "./PlaceSearchBox";
 import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
 import { PlaceForm } from "@/components/places/PlaceForm";
@@ -20,6 +22,7 @@ const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 
 export function MapScreen({ tripId }: { tripId: string }) {
   const { data: places = [] } = usePlaces(tripId);
+  const { data: trip } = useTrip(tripId);
   const visibleCategories = useVisibleCategories(tripId);
   const router = useRouter();
   const pathname = usePathname();
@@ -66,6 +69,7 @@ export function MapScreen({ tripId }: { tripId: string }) {
           zoomControl
         >
           <MapResizeFix />
+          <DestinationCenter destination={trip?.destination} hasPlaces={places.length > 0} />
           <FitBounds points={filtered.map((p) => ({ lat: p.lat, lng: p.lng }))} />
           {filtered.map((place) => (
             <CategoryPin
