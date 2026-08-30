@@ -121,7 +121,7 @@ function EstravelContent({ tripId }: { tripId: string }) {
     setSharing(true);
     setShareError(null);
     try {
-      const dataUrl = renderRouteImage({
+      const dataUrl = await renderRouteImage({
         paths: drawablePaths,
         stops: mode === "clean" ? [] : visitedPlaces.map((p) => ({ lat: p.lat, lng: p.lng })),
         mode,

@@ -1,5 +1,6 @@
 import { formatDistance, type LatLng } from "@/lib/geo";
 import { dayColor, type BuiltRoute } from "./buildRoute";
+import { computeMapView, fetchStaticMap } from "./staticMap";
 
 const W = 1080;
 const H = 1350;
@@ -9,6 +10,9 @@ const BG = "#f6f8f9";
 const INK = "#1f2a2e";
 const MUTED = "#647880";
 const ACCENT = "#2f6f7e";
+
+/** Cuánto se aclara el mapa para que el trazado destaque por encima. */
+const MAP_WASH = 0.55;
 
 export type RouteImageMode = "full" | "clean" | "days";
 
@@ -22,11 +26,12 @@ export interface DrawablePath {
 /**
  * Dibuja el recuerdo en un canvas propio.
  *
- * No se captura el mapa de Google: sus tiles vienen de otro dominio y
- * "contaminan" el canvas, lo que hace que toDataURL falle por seguridad. Así
- * que se dibuja el trazado solo, estilo Strava, con la paleta de la app.
+ * El mapa de fondo no se captura del mapa interactivo (sus tiles son de otro
+ * dominio y bloquearían la exportación), sino que se pide a la Static Maps API
+ * y se trae por fetch, lo que sí permite exportar. Si esa API no está
+ * habilitada, la imagen se genera igual sobre fondo liso.
  */
-export function renderRouteImage({
+export async function renderRouteImage({
   paths,
   stops,
   mode,
@@ -40,7 +45,7 @@ export function renderRouteImage({
   route: BuiltRoute;
   tripName: string;
   dateRange: string;
-}): string | null {
+}): Promise<string | null> {
   const all = paths.flatMap((p) => p.path);
   if (all.length < 2) return null;
 
@@ -53,32 +58,36 @@ export function renderRouteImage({
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, W, H);
 
-  // Proyección equirectangular sencilla: a escala de ciudad la distorsión es
-  // inapreciable y evita depender de ninguna librería de mapas.
-  const lats = all.map((p) => p.lat);
-  const lngs = all.map((p) => p.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const lngScale = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
-
-  const spanX = Math.max((maxLng - minLng) * lngScale, 1e-6);
-  const spanY = Math.max(maxLat - minLat, 1e-6);
-
   const areaTop = PAD + 200;
   const areaBottom = H - PAD - (mode === "full" ? 150 : 40);
+  const areaX = PAD;
   const areaW = W - PAD * 2;
   const areaH = areaBottom - areaTop;
-  const scale = Math.min(areaW / spanX, areaH / spanY);
-  const offsetX = PAD + (areaW - spanX * scale) / 2;
-  const offsetY = areaTop + (areaH - spanY * scale) / 2;
 
-  const project = (p: LatLng) => ({
-    x: offsetX + (p.lng - minLng) * lngScale * scale,
-    // La latitud crece hacia arriba, el canvas hacia abajo.
-    y: offsetY + (maxLat - p.lat) * scale,
-  });
+  const view = computeMapView(all, areaW, areaH);
+
+  // Mapa de fondo, recortado al área y aclarado.
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const mapImage = apiKey ? await fetchStaticMap(view, apiKey) : null;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(areaX, areaTop, areaW, areaH);
+  ctx.clip();
+
+  if (mapImage) {
+    ctx.drawImage(mapImage, areaX, areaTop, areaW, areaH);
+    ctx.fillStyle = BG;
+    ctx.globalAlpha = MAP_WASH;
+    ctx.fillRect(areaX, areaTop, areaW, areaH);
+    ctx.globalAlpha = 1;
+    mapImage.close();
+  }
+
+  const project = (p: LatLng) => {
+    const { x, y } = view.project(p);
+    return { x: areaX + x, y: areaTop + y };
+  };
 
   const trace = (path: LatLng[]) => {
     ctx.beginPath();
@@ -92,14 +101,14 @@ export function renderRouteImage({
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // Primero el borde blanco de todos los tramos sólidos, para que las líneas
-  // se despeguen entre ellas cuando se cruzan.
+  // Primero el borde blanco de los tramos sólidos, para que se despeguen del
+  // mapa y entre ellos cuando se cruzan.
   for (const item of paths) {
     if (item.dashed || item.path.length < 2) continue;
     trace(item.path);
     ctx.setLineDash([]);
     ctx.strokeStyle = "#ffffff";
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.95;
     ctx.lineWidth = 18;
     ctx.stroke();
   }
@@ -111,7 +120,7 @@ export function renderRouteImage({
 
     if (item.dashed) {
       ctx.setLineDash([10, 16]);
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.45;
       ctx.lineWidth = 5;
     } else {
       ctx.setLineDash([]);
@@ -123,7 +132,6 @@ export function renderRouteImage({
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 
-  // Paradas
   for (const stop of stops) {
     const { x, y } = project(stop);
     ctx.beginPath();
@@ -136,11 +144,9 @@ export function renderRouteImage({
   }
 
   // Inicio y final del recorrido
-  const first = all[0];
-  const last = all[all.length - 1];
   for (const [point, color] of [
-    [first, "#4f7a68"],
-    [last, "#bd6248"],
+    [all[0], "#4f7a68"],
+    [all[all.length - 1], "#bd6248"],
   ] as const) {
     const { x, y } = project(point);
     ctx.beginPath();
@@ -152,6 +158,8 @@ export function renderRouteImage({
     ctx.fillStyle = color;
     ctx.fill();
   }
+
+  ctx.restore();
 
   // Cabecera. "GoCy" va arriba del todo como antetítulo: alineado a la derecha
   // a la misma altura, los títulos largos se le montaban encima.
