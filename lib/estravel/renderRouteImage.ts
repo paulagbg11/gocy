@@ -1,4 +1,4 @@
-import { formatDistance } from "@/lib/geo";
+import { formatDistance, type LatLng } from "@/lib/geo";
 import { dayColor, type BuiltRoute } from "./buildRoute";
 
 const W = 1080;
@@ -12,6 +12,13 @@ const ACCENT = "#2f6f7e";
 
 export type RouteImageMode = "full" | "clean" | "days";
 
+export interface DrawablePath {
+  dayIndex: number | null;
+  path: LatLng[];
+  /** Desplazamiento en transporte o salto entre días: se pinta discontinuo. */
+  dashed: boolean;
+}
+
 /**
  * Dibuja el recuerdo en un canvas propio.
  *
@@ -20,17 +27,22 @@ export type RouteImageMode = "full" | "clean" | "days";
  * que se dibuja el trazado solo, estilo Strava, con la paleta de la app.
  */
 export function renderRouteImage({
-  route,
+  paths,
+  stops,
   mode,
+  route,
   tripName,
   dateRange,
 }: {
-  route: BuiltRoute;
+  paths: DrawablePath[];
+  stops: LatLng[];
   mode: RouteImageMode;
+  route: BuiltRoute;
   tripName: string;
   dateRange: string;
 }): string | null {
-  if (route.points.length < 2) return null;
+  const all = paths.flatMap((p) => p.path);
+  if (all.length < 2) return null;
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -43,78 +55,106 @@ export function renderRouteImage({
 
   // Proyección equirectangular sencilla: a escala de ciudad la distorsión es
   // inapreciable y evita depender de ninguna librería de mapas.
-  const lats = route.points.map((p) => p.lat);
-  const lngs = route.points.map((p) => p.lng);
+  const lats = all.map((p) => p.lat);
+  const lngs = all.map((p) => p.lng);
   const minLat = Math.min(...lats);
   const maxLat = Math.max(...lats);
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
-  const midLat = (minLat + maxLat) / 2;
-  const lngScale = Math.cos((midLat * Math.PI) / 180);
+  const lngScale = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
 
   const spanX = Math.max((maxLng - minLng) * lngScale, 1e-6);
   const spanY = Math.max(maxLat - minLat, 1e-6);
 
   const areaTop = PAD + 200;
-  const areaBottom = H - PAD - 150;
+  const areaBottom = H - PAD - (mode === "full" ? 150 : 40);
   const areaW = W - PAD * 2;
   const areaH = areaBottom - areaTop;
   const scale = Math.min(areaW / spanX, areaH / spanY);
   const offsetX = PAD + (areaW - spanX * scale) / 2;
   const offsetY = areaTop + (areaH - spanY * scale) / 2;
 
-  const project = (p: { lat: number; lng: number }) => ({
+  const project = (p: LatLng) => ({
     x: offsetX + (p.lng - minLng) * lngScale * scale,
     // La latitud crece hacia arriba, el canvas hacia abajo.
     y: offsetY + (maxLat - p.lat) * scale,
   });
 
-  // Trazado
+  const trace = (path: LatLng[]) => {
+    ctx.beginPath();
+    path.forEach((point, i) => {
+      const { x, y } = project(point);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+  };
+
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  for (const segment of route.segments) {
-    const a = project(segment.from);
-    const b = project(segment.to);
 
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+  // Primero el borde blanco de todos los tramos sólidos, para que las líneas
+  // se despeguen entre ellas cuando se cruzan.
+  for (const item of paths) {
+    if (item.dashed || item.path.length < 2) continue;
+    trace(item.path);
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "#ffffff";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 18;
+    ctx.stroke();
+  }
 
-    if (segment.isTransport) {
-      // Discontinuo: ahí no se caminó (transporte, o salto entre días).
-      ctx.setLineDash([10, 14]);
-      ctx.strokeStyle = mode === "days" ? dayColor(segment.dayIndex) : ACCENT;
-      ctx.globalAlpha = 0.35;
+  for (const item of paths) {
+    if (item.path.length < 2) continue;
+    trace(item.path);
+    ctx.strokeStyle = mode === "days" ? dayColor(item.dayIndex) : ACCENT;
+
+    if (item.dashed) {
+      ctx.setLineDash([10, 16]);
+      ctx.globalAlpha = 0.4;
       ctx.lineWidth = 5;
     } else {
       ctx.setLineDash([]);
-      ctx.strokeStyle = mode === "days" ? dayColor(segment.dayIndex) : ACCENT;
       ctx.globalAlpha = 1;
-      ctx.lineWidth = 9;
+      ctx.lineWidth = 11;
     }
     ctx.stroke();
   }
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 
-  // Paradas con nombre (solo cuando la fuente son los lugares, o en modo completo)
-  if (mode !== "clean") {
-    for (const point of route.points) {
-      if (!point.label) continue;
-      const { x, y } = project(point);
-      ctx.beginPath();
-      ctx.arc(x, y, 13, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = mode === "days" ? dayColor(point.dayIndex) : ACCENT;
-      ctx.stroke();
-    }
+  // Paradas
+  for (const stop of stops) {
+    const { x, y } = project(stop);
+    ctx.beginPath();
+    ctx.arc(x, y, 11, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = ACCENT;
+    ctx.stroke();
   }
 
-  // Cabecera. "GoCy" va arriba del todo como antetítulo: antes estaba alineado
-  // a la derecha a la misma altura que el nombre del viaje y los títulos largos
-  // se le montaban encima.
+  // Inicio y final del recorrido
+  const first = all[0];
+  const last = all[all.length - 1];
+  for (const [point, color] of [
+    [first, "#4f7a68"],
+    [last, "#bd6248"],
+  ] as const) {
+    const { x, y } = project(point);
+    ctx.beginPath();
+    ctx.arc(x, y, 15, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  // Cabecera. "GoCy" va arriba del todo como antetítulo: alineado a la derecha
+  // a la misma altura, los títulos largos se le montaban encima.
   ctx.textAlign = "left";
   ctx.fillStyle = MUTED;
   ctx.font = "600 26px Outfit, system-ui, sans-serif";
@@ -136,7 +176,6 @@ export function renderRouteImage({
   ctx.font = "400 34px Outfit, system-ui, sans-serif";
   ctx.fillText(dateRange, PAD, PAD + 126);
 
-  // Datos abajo
   if (mode === "full") {
     const distanceLabel =
       route.source === "gps" ? "aprox. a pie" : "en línea recta entre paradas";
@@ -159,13 +198,4 @@ export function renderRouteImage({
   }
 
   return canvas.toDataURL("image/png");
-}
-
-export function downloadDataUrl(dataUrl: string, filename: string) {
-  const link = document.createElement("a");
-  link.href = dataUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
 }
