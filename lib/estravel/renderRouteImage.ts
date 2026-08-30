@@ -49,6 +49,12 @@ export async function renderRouteImage({
   const all = paths.flatMap((p) => p.path);
   if (all.length < 2) return null;
 
+  // El inicio y el final salen del recorrido en su orden real, no de `all`: ahí
+  // los saltos en transporte van los últimos, así que el punto "final" acababa
+  // dibujándose en el destino de un salto en vez de al terminar el viaje.
+  const first = route.points[0] ?? all[0];
+  const last = route.points[route.points.length - 1] ?? all[all.length - 1];
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -145,8 +151,8 @@ export async function renderRouteImage({
 
   // Inicio y final del recorrido
   for (const [point, color] of [
-    [all[0], "#4f7a68"],
-    [all[all.length - 1], "#bd6248"],
+    [first, "#4f7a68"],
+    [last, "#bd6248"],
   ] as const) {
     const { x, y } = project(point);
     ctx.beginPath();
