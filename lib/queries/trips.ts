@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { diffTripDays } from "@/lib/dates";
+import { downscaleImage } from "@/lib/images";
 import type { Trip, TripDay } from "@/lib/supabase/types";
 
 export function useTrips() {
@@ -152,9 +153,10 @@ export function useUploadTripCover() {
   return useMutation({
     mutationFn: async ({ tripId, file }: { tripId: string; file: File }) => {
       const supabase = createClient();
-      const ext = file.name.split(".").pop() ?? "jpg";
+      const optimized = await downscaleImage(file);
+      const ext = optimized.name.split(".").pop() ?? "jpg";
       const path = `${tripId}/cover-${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("trip-covers").upload(path, file, {
+      const { error: uploadError } = await supabase.storage.from("trip-covers").upload(path, optimized, {
         upsert: true,
       });
       if (uploadError) throw uploadError;

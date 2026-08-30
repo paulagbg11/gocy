@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin } from "lucide-react";
 import { formatDateRange } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
@@ -14,10 +15,19 @@ export function TripCard({ trip }: { trip: Trip }) {
       href={`/trips/${trip.id}/map`}
       className="group flex flex-col overflow-hidden rounded-[var(--radius-md)] bg-surface shadow-[var(--shadow-sm)] transition-shadow duration-150 ease-out hover:shadow-[var(--shadow-md)]"
     >
-      <div
-        className="h-28 w-full bg-surface-2 bg-cover bg-center"
-        style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined}
-      />
+      <div className="relative h-28 w-full bg-surface-2">
+        {coverUrl && (
+          // next/image en vez de background-image: así se descarga una versión
+          // del tamaño de la tarjeta y no la foto original entera.
+          <Image
+            src={coverUrl}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 100vw, 320px"
+            className="object-cover"
+          />
+        )}
+      </div>
       <div className="flex flex-col gap-1 p-4">
         <h3 className="font-semibold leading-tight">{trip.name}</h3>
         {trip.destination && (

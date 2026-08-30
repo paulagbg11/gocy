@@ -3,6 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, ImagePlus } from "lucide-react";
 import { useTrip, useUpdateTrip, useDeleteTrip, useUploadTripCover } from "@/lib/queries/trips";
 import { useProfile } from "@/components/profile/ProfileProvider";
@@ -23,6 +24,10 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
 
   const [form, setForm] = useState({ name: "", destination: "", startDate: "", endDate: "" });
   const [saving, setSaving] = useState(false);
+
+  const coverUrl = trip?.cover_image_path
+    ? createClient().storage.from("trip-covers").getPublicUrl(trip.cover_image_path).data.publicUrl
+    : null;
 
   useEffect(() => {
     if (!trip) return;
@@ -85,19 +90,12 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
             type="button"
             onClick={() => coverInputRef.current?.click()}
             disabled={uploadCover.isPending}
-            className="flex h-28 w-full items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-surface-2 bg-cover bg-center text-muted-foreground transition-colors duration-150 ease-out hover:brightness-95"
-            style={
-              trip?.cover_image_path
-                ? {
-                    backgroundImage: `url(${
-                      createClient().storage.from("trip-covers").getPublicUrl(trip.cover_image_path)
-                        .data.publicUrl
-                    })`,
-                  }
-                : undefined
-            }
+            className="relative flex h-28 w-full items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-surface-2 text-muted-foreground transition-colors duration-150 ease-out hover:brightness-95"
           >
-            {!trip?.cover_image_path && (
+            {coverUrl && (
+              <Image src={coverUrl} alt="" fill sizes="(max-width: 640px) 100vw, 448px" className="object-cover" />
+            )}
+            {!coverUrl && (
               <span className="flex flex-col items-center gap-1 text-sm">
                 {uploadCover.isPending ? (
                   "Subiendo…"

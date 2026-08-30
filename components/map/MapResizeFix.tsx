@@ -4,13 +4,21 @@ import { useEffect } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 
 /**
- * @vis.gl/react-google-maps no usa ResizeObserver internamente: si el
- * contenedor del mapa no tiene ya su tamaño final en el momento en que se
- * crea el `google.maps.Map` (algo habitual con layouts flex, donde el
- * tamaño se resuelve un instante después del primer render), el mapa se
- * queda con 0px de alto y nunca se repinta. Este componente avisa a Google
- * Maps cada vez que el contenedor cambia de tamaño (incluida esa primera
- * vez), y también cubre casos reales como rotar el móvil.
+ * Mantiene el mapa sincronizado con el tamaño real de su contenedor.
+ *
+ * Google Maps se dimensiona al crearse y no vuelve a mirar: si nace dentro de
+ * una caja que todavía no tiene su tamaño final (habitual con layouts flex, o
+ * al reabrir la PWA mientras la pestaña sigue en segundo plano), se queda en
+ * gris y no se recupera solo — hasta ahora había que salir de la app y volver
+ * a entrar.
+ *
+ * Por eso avisamos a Google Maps en tres momentos:
+ *  - cuando el contenedor cambia de tamaño (ResizeObserver),
+ *  - al montar,
+ *  - y cuando la app vuelve a primer plano. Este último es el importante: el
+ *    ResizeObserver NO dispara mientras el documento está oculto, así que si
+ *    el mapa se creó en ese estado, volver a la app es justo el momento en el
+ *    que hay que recolocarlo.
  */
 export function MapResizeFix() {
   const map = useMap();
@@ -18,13 +26,28 @@ export function MapResizeFix() {
   useEffect(() => {
     if (!map) return;
     const container = map.getDiv();
-    const triggerResize = () => google.maps.event.trigger(map, "resize");
+
+    const triggerResize = () => {
+      const { width, height } = container.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      google.maps.event.trigger(map, "resize");
+    };
 
     const observer = new ResizeObserver(triggerResize);
     observer.observe(container);
     triggerResize();
 
-    return () => observer.disconnect();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") triggerResize();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onVisible);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onVisible);
+    };
   }, [map]);
 
   return null;
