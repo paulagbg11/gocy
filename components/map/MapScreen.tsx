@@ -12,10 +12,14 @@ import { FitBounds } from "./FitBounds";
 import { MapResizeFix } from "./MapResizeFix";
 import { DestinationCenter } from "./DestinationCenter";
 import { PlaceSearchBox, type SelectedPlace } from "./PlaceSearchBox";
+import { LiveLocationMarker } from "./LiveLocationMarker";
+import { LocationPrompt } from "./LocationPrompt";
 import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
 import { PlaceForm } from "@/components/places/PlaceForm";
 import { Sheet } from "@/components/ui/Sheet";
 import { Chip } from "@/components/ui/Chip";
+import { useGeolocationPermission } from "@/lib/tracking/useGeolocationPermission";
+import { isTripActive, useTrackingPreference } from "@/lib/tracking/useTripTracking";
 
 // Centro por defecto (Madrid) mientras no hay pines o no se ha resuelto la ubicación.
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
@@ -29,6 +33,14 @@ export function MapScreen({ tripId }: { tripId: string }) {
   const searchParams = useSearchParams();
   const [deselected, setDeselected] = useState<Set<string>>(new Set());
   const [pendingPlace, setPendingPlace] = useState<SelectedPlace | null>(null);
+  const [promptDismissed, setPromptDismissed] = useState(false);
+
+  // El punto en vivo solo tiene sentido durante los días del viaje: fuera de
+  // esas fechas el mapa se comporta como siempre.
+  const { permission, request } = useGeolocationPermission();
+  const { enabled: trackingEnabled } = useTrackingPreference(tripId);
+  const tripActive = isTripActive(trip) && trackingEnabled;
+  const showLiveLocation = tripActive && permission === "granted";
 
   // `Map` aquí es el componente de @vis.gl/react-google-maps (importado más
   // arriba), así que usamos globalThis.Map para el Map de JS.
@@ -69,6 +81,7 @@ export function MapScreen({ tripId }: { tripId: string }) {
           zoomControl
         >
           <MapResizeFix />
+          {showLiveLocation && <LiveLocationMarker />}
           <DestinationCenter destination={trip?.destination} hasPlaces={places.length > 0} />
           <FitBounds points={filtered.map((p) => ({ lat: p.lat, lng: p.lng }))} />
           {filtered.map((place) => (
@@ -97,6 +110,14 @@ export function MapScreen({ tripId }: { tripId: string }) {
               </Chip>
             ))}
           </div>
+
+          {tripActive && !promptDismissed && permission !== "granted" && (
+            <LocationPrompt
+              permission={permission}
+              onRequest={request}
+              onDismiss={() => setPromptDismissed(true)}
+            />
+          )}
         </div>
 
         <PlaceDetailSheet tripId={tripId} places={places} />

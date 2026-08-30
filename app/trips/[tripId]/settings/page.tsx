@@ -9,6 +9,8 @@ import { useTrip, useUpdateTrip, useDeleteTrip, useUploadTripCover } from "@/lib
 import { useProfile } from "@/components/profile/ProfileProvider";
 import { createClient } from "@/lib/supabase/client";
 import { CategoryManager } from "@/components/settings/CategoryManager";
+import { useTrackPoints, useDeleteTrack } from "@/lib/queries/track-points";
+import { useTrackingPreference } from "@/lib/tracking/useTripTracking";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -24,6 +26,15 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
 
   const [form, setForm] = useState({ name: "", destination: "", startDate: "", endDate: "" });
   const [saving, setSaving] = useState(false);
+
+  const { enabled: trackingEnabled, setTrackingEnabled } = useTrackingPreference(tripId);
+  const { data: trackPoints = [] } = useTrackPoints(tripId);
+  const deleteTrack = useDeleteTrack();
+
+  const handleDeleteTrack = async () => {
+    if (!confirm("¿Borrar el recorrido registrado de este viaje? No se puede deshacer.")) return;
+    await deleteTrack.mutateAsync(tripId);
+  };
 
   const coverUrl = trip?.cover_image_path
     ? createClient().storage.from("trip-covers").getPublicUrl(trip.cover_image_path).data.publicUrl
@@ -155,6 +166,38 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
 
       <h2 className="text-sm font-medium text-muted-foreground mb-3">Categorías</h2>
       <CategoryManager tripId={tripId} />
+
+      <hr className="my-6 border-border" />
+
+      <h2 className="text-sm font-medium text-muted-foreground mb-3">Ubicación durante el viaje</h2>
+      <div className="flex flex-col gap-3">
+        <label className="flex items-start gap-3 rounded-[var(--radius-sm)] bg-surface px-3.5 py-3 shadow-[var(--shadow-sm)]">
+          <input
+            type="checkbox"
+            checked={trackingEnabled}
+            onChange={(e) => setTrackingEnabled(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+          />
+          <span className="flex-1">
+            <span className="block text-sm font-medium">Registrar por dónde pasamos</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">
+              Solo durante los días del viaje y mientras la app está abierta: una web no puede
+              hacerlo en segundo plano. Sirve para dibujar el recorrido en Estravel.
+            </span>
+          </span>
+        </label>
+
+        {trackPoints.length > 0 && (
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-surface px-3.5 py-3 shadow-[var(--shadow-sm)]">
+            <span className="text-sm">
+              {trackPoints.length} {trackPoints.length === 1 ? "punto guardado" : "puntos guardados"}
+            </span>
+            <Button variant="danger" size="sm" onClick={handleDeleteTrack}>
+              Borrar recorrido
+            </Button>
+          </div>
+        )}
+      </div>
 
       <hr className="my-6 border-border" />
 

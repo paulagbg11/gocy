@@ -133,6 +133,16 @@ export interface TripDocument {
   updated_at: string;
 }
 
+export interface TrackPoint {
+  id: string;
+  trip_id: string;
+  profile_id: string | null;
+  lat: number;
+  lng: number;
+  accuracy: number | null;
+  recorded_at: string;
+}
+
 export interface Attachment {
   id: string;
   document_id: string;

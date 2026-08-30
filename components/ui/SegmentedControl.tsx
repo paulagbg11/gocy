@@ -33,7 +33,7 @@ export function SegmentedControl<T extends string>({
           aria-selected={opt.value === value}
           onClick={() => onChange(opt.value)}
           className={clsx(
-            "rounded-[calc(var(--radius-sm)-4px)] px-3.5 h-8 text-sm font-medium transition-colors duration-150 ease-out",
+            "rounded-[calc(var(--radius-sm)-4px)] px-3.5 h-8 text-sm font-medium whitespace-nowrap transition-colors duration-150 ease-out",
             opt.value === value
               ? "bg-surface text-foreground shadow-[var(--shadow-sm)]"
               : "text-muted-foreground hover:text-foreground",

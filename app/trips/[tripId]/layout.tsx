@@ -3,14 +3,16 @@
 import { use } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Map, CalendarDays, FileText, Settings } from "lucide-react";
+import { ArrowLeft, Map, CalendarDays, FileText, Footprints, Settings } from "lucide-react";
 import clsx from "clsx";
 import { useTrip } from "@/lib/queries/trips";
 import { useTripRealtime } from "@/lib/realtime/useTripRealtime";
+import { isTripActive, useTrackingPreference, useTripTracking } from "@/lib/tracking/useTripTracking";
 
 const TABS = [
   { href: "map", label: "Mapa", icon: Map },
   { href: "days", label: "Días", icon: CalendarDays },
+  { href: "estravel", label: "Estravel", icon: Footprints },
   { href: "docs", label: "Docs", icon: FileText },
 ];
 
@@ -22,6 +24,11 @@ export default function TripLayout({
   const { data: trip } = useTrip(tripId);
   const pathname = usePathname();
   useTripRealtime(tripId);
+
+  // Las migas se capturan desde el layout para que sigan grabándose estés en la
+  // pestaña que estés dentro del viaje.
+  const { enabled: trackingEnabled } = useTrackingPreference(tripId);
+  useTripTracking({ tripId, active: isTripActive(trip) && trackingEnabled });
 
   return (
     <div className="flex-1 flex flex-col h-dvh">
