@@ -5,10 +5,9 @@ import { useForm, Controller } from "react-hook-form";
 import { useVisibleCategories } from "@/lib/queries/categories";
 import { useCreatePlace, useUpdatePlace, useDeletePlace } from "@/lib/queries/places";
 import { useProfile } from "@/components/profile/ProfileProvider";
-import { AddCategoryInline } from "@/components/categories/AddCategoryInline";
+import { CategoryPicker } from "@/components/categories/CategoryPicker";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Chip } from "@/components/ui/Chip";
 import type { Place } from "@/lib/supabase/types";
 import type { SelectedPlace } from "@/components/map/PlaceSearchBox";
 
@@ -92,20 +91,11 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProp
           control={control}
           name="category_id"
           render={({ field }) => (
-            <div className="flex flex-wrap gap-2">
-              {visibleCategories.map((cat) => (
-                <Chip
-                  key={cat.id}
-                  type="button"
-                  active={field.value === cat.id}
-                  color={cat.color}
-                  onClick={() => field.onChange(cat.id)}
-                >
-                  {cat.emoji} {cat.name}
-                </Chip>
-              ))}
-              <AddCategoryInline onCreated={(cat) => field.onChange(cat.id)} />
-            </div>
+            <CategoryPicker
+              categories={visibleCategories}
+              value={field.value}
+              onChange={field.onChange}
+            />
           )}
         />
       </div>

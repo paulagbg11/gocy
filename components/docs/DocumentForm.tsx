@@ -2,55 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DOCUMENT_TYPE_LABEL, DOCUMENT_TYPE_ORDER } from "@/lib/documents";
+import { DOCUMENT_FIELDS, DOCUMENT_TYPE_LABEL, DOCUMENT_TYPE_ORDER } from "@/lib/documents";
 import { useCreateDocument, useUpdateDocument, useDeleteDocument } from "@/lib/queries/documents";
 import { useProfile } from "@/components/profile/ProfileProvider";
 import { Chip } from "@/components/ui/Chip";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { DocumentDetails, DocumentType, TripDocument } from "@/lib/supabase/types";
-
-const FIELDS_BY_TYPE: Record<DocumentType, { key: string; label: string; type?: string }[]> = {
-  flight: [
-    { key: "airline", label: "Aerolínea" },
-    { key: "flight_number", label: "Nº de vuelo" },
-    { key: "departure_airport", label: "Aeropuerto de salida" },
-    { key: "departure_time", label: "Hora de salida", type: "datetime-local" },
-    { key: "arrival_airport", label: "Aeropuerto de llegada" },
-    { key: "arrival_time", label: "Hora de llegada", type: "datetime-local" },
-    { key: "confirmation_code", label: "Localizador" },
-  ],
-  transport: [
-    { key: "company", label: "Compañía" },
-    { key: "service_number", label: "Nº de tren/bus" },
-    { key: "departure_station", label: "Estación de salida" },
-    { key: "departure_time", label: "Hora de salida", type: "datetime-local" },
-    { key: "arrival_station", label: "Estación de llegada" },
-    { key: "arrival_time", label: "Hora de llegada", type: "datetime-local" },
-    { key: "seat", label: "Asiento / coche" },
-    { key: "confirmation_code", label: "Localizador" },
-  ],
-  lodging: [
-    { key: "address", label: "Dirección" },
-    { key: "check_in", label: "Check-in", type: "datetime-local" },
-    { key: "check_out", label: "Check-out", type: "datetime-local" },
-    { key: "confirmation_code", label: "Nº de reserva" },
-  ],
-  reservation: [
-    { key: "place_name", label: "Lugar" },
-    { key: "date_time", label: "Fecha y hora", type: "datetime-local" },
-    { key: "party_size", label: "Nº de personas", type: "number" },
-    { key: "confirmation_code", label: "Nº de reserva" },
-  ],
-  ticket: [
-    { key: "venue", label: "Lugar / evento" },
-    { key: "date_time", label: "Fecha y hora", type: "datetime-local" },
-    { key: "quantity", label: "Nº de entradas", type: "number" },
-    { key: "seat", label: "Asiento / zona" },
-    { key: "confirmation_code", label: "Nº de entrada / localizador" },
-  ],
-  note: [],
-};
 
 interface DocumentFormProps {
   tripId: string;
@@ -142,7 +100,7 @@ export function DocumentForm({ tripId, editing, onSaved }: DocumentFormProps) {
         />
       </div>
 
-      {FIELDS_BY_TYPE[type].map((field) => (
+      {DOCUMENT_FIELDS[type].map((field) => (
         <div key={field.key}>
           <Label htmlFor={field.key}>{field.label}</Label>
           <Input

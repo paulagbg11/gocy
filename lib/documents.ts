@@ -108,3 +108,151 @@ export const documentFormSchema = z.object({
 });
 
 export type DocumentFormValues = z.infer<typeof documentFormSchema>;
+
+export interface DocumentField {
+  key: string;
+  label: string;
+  type?: string;
+}
+
+/**
+ * Campos de cada tipo de documento. Viven aquí y no en el formulario porque la
+ * vista de resumen recorre exactamente los mismos, y con dos listas separadas
+ * cualquier campo nuevo se quedaría fuera de una de las dos pantallas.
+ */
+export const DOCUMENT_FIELDS: Record<DocumentType, DocumentField[]> = {
+  flight: [
+    { key: "airline", label: "Aerolínea" },
+    { key: "flight_number", label: "Nº de vuelo" },
+    { key: "departure_airport", label: "Aeropuerto de salida" },
+    { key: "departure_time", label: "Hora de salida", type: "datetime-local" },
+    { key: "arrival_airport", label: "Aeropuerto de llegada" },
+    { key: "arrival_time", label: "Hora de llegada", type: "datetime-local" },
+    { key: "confirmation_code", label: "Localizador" },
+  ],
+  transport: [
+    { key: "company", label: "Compañía" },
+    { key: "service_number", label: "Nº de tren/bus" },
+    { key: "departure_station", label: "Estación de salida" },
+    { key: "departure_time", label: "Hora de salida", type: "datetime-local" },
+    { key: "arrival_station", label: "Estación de llegada" },
+    { key: "arrival_time", label: "Hora de llegada", type: "datetime-local" },
+    { key: "seat", label: "Asiento / coche" },
+    { key: "confirmation_code", label: "Localizador" },
+  ],
+  lodging: [
+    { key: "address", label: "Dirección" },
+    { key: "check_in", label: "Check-in", type: "datetime-local" },
+    { key: "check_out", label: "Check-out", type: "datetime-local" },
+    { key: "confirmation_code", label: "Nº de reserva" },
+  ],
+  reservation: [
+    { key: "place_name", label: "Lugar" },
+    { key: "date_time", label: "Fecha y hora", type: "datetime-local" },
+    { key: "party_size", label: "Nº de personas", type: "number" },
+    { key: "confirmation_code", label: "Nº de reserva" },
+  ],
+  ticket: [
+    { key: "venue", label: "Lugar / evento" },
+    { key: "date_time", label: "Fecha y hora", type: "datetime-local" },
+    { key: "quantity", label: "Nº de entradas", type: "number" },
+    { key: "seat", label: "Asiento / zona" },
+    { key: "confirmation_code", label: "Nº de entrada / localizador" },
+  ],
+  note: [],
+};
+
+/**
+ * Trayecto que se pinta en grande en la cabecera del resumen: de dónde a
+ * dónde y a qué hora. Los campos que salen aquí no se repiten luego en la
+ * lista de abajo.
+ */
+interface JourneySpec {
+  from: { place: string; time: string };
+  to: { place: string; time: string };
+  fromLabel: string;
+  toLabel: string;
+}
+
+const JOURNEY_BY_TYPE: Partial<Record<DocumentType, JourneySpec>> = {
+  flight: {
+    from: { place: "departure_airport", time: "departure_time" },
+    to: { place: "arrival_airport", time: "arrival_time" },
+    fromLabel: "Salida",
+    toLabel: "Llegada",
+  },
+  transport: {
+    from: { place: "departure_station", time: "departure_time" },
+    to: { place: "arrival_station", time: "arrival_time" },
+    fromLabel: "Salida",
+    toLabel: "Llegada",
+  },
+  lodging: {
+    from: { place: "", time: "check_in" },
+    to: { place: "", time: "check_out" },
+    fromLabel: "Check-in",
+    toLabel: "Check-out",
+  },
+};
+
+export interface JourneyEnd {
+  label: string;
+  place: string | null;
+  time: string | null;
+  date: string | null;
+}
+
+/** Devuelve el trayecto para la cabecera, o null si no hay nada que enseñar. */
+export function documentJourney(
+  type: DocumentType,
+  details: DocumentDetails,
+): { from: JourneyEnd; to: JourneyEnd; fields: string[] } | null {
+  const spec = JOURNEY_BY_TYPE[type];
+  if (!spec) return null;
+  const raw = details as Record<string, unknown>;
+
+  const end = (side: "from" | "to"): JourneyEnd => {
+    const { place, time } = spec[side];
+    const parts = splitDateTime(raw[time]);
+    return {
+      label: side === "from" ? spec.fromLabel : spec.toLabel,
+      place: typeof raw[place] === "string" && raw[place] ? (raw[place] as string) : null,
+      time: parts?.time ?? null,
+      date: parts?.date ?? null,
+    };
+  };
+
+  const from = end("from");
+  const to = end("to");
+  if (!from.place && !from.time && !to.place && !to.time) return null;
+
+  return {
+    from,
+    to,
+    fields: [spec.from.place, spec.from.time, spec.to.place, spec.to.time].filter(Boolean),
+  };
+}
+
+/** Separa un valor de datetime-local en hora y fecha, ya en castellano. */
+export function splitDateTime(raw: unknown): { time: string; date: string } | null {
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    const parsed = parseISO(raw);
+    return {
+      time: format(parsed, "HH:mm", { locale: es }),
+      date: format(parsed, "EEE d MMM", { locale: es }),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Valor de un campo listo para enseñar, o null si está vacío. */
+export function formatFieldValue(field: DocumentField, raw: unknown): string | null {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (field.type === "datetime-local") {
+    const parts = splitDateTime(raw);
+    return parts ? `${parts.date}, ${parts.time}` : null;
+  }
+  return String(raw);
+}

@@ -53,8 +53,14 @@
   }
 }
 
-* {
-  border-color: var(--border);
+/* Color de borde por defecto. Va en la capa `base` a propósito: suelto, fuera
+   de capa, ganaba a las utilidades de Tailwind (en v4 lo no-estratificado tiene
+   prioridad sobre las capas), y cualquier `border-accent` o `border-transparent`
+   del proyecto se quedaba sin efecto sin avisar. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 body {

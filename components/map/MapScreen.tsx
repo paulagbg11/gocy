@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Map } from "@vis.gl/react-google-maps";
 import { usePlaces } from "@/lib/queries/places";
+import { findExistingPlace } from "@/lib/places";
 import { useTrip } from "@/lib/queries/trips";
 import { useVisibleCategories } from "@/lib/queries/categories";
 import { MapProvider } from "./MapProvider";
@@ -18,8 +19,10 @@ import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
 import { PlaceForm } from "@/components/places/PlaceForm";
 import { Sheet } from "@/components/ui/Sheet";
 import { Chip } from "@/components/ui/Chip";
+import { Button } from "@/components/ui/Button";
 import { useGeolocationPermission } from "@/lib/tracking/useGeolocationPermission";
 import { isTripActive, useTrackingPreference } from "@/lib/tracking/useTripTracking";
+import type { Place } from "@/lib/supabase/types";
 
 // Centro por defecto (Madrid) mientras no hay pines o no se ha resuelto la ubicación.
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
@@ -33,6 +36,7 @@ export function MapScreen({ tripId }: { tripId: string }) {
   const searchParams = useSearchParams();
   const [deselected, setDeselected] = useState<Set<string>>(new Set());
   const [pendingPlace, setPendingPlace] = useState<SelectedPlace | null>(null);
+  const [duplicate, setDuplicate] = useState<Place | null>(null);
   const [promptDismissed, setPromptDismissed] = useState(false);
 
   // El punto en vivo solo tiene sentido durante los días del viaje: fuera de
@@ -61,6 +65,17 @@ export function MapScreen({ tripId }: { tripId: string }) {
       else next.add(categoryId);
       return next;
     });
+  };
+
+  /**
+   * Buscar un sitio que ya está guardado no lo duplica: se avisa y se ofrece
+   * ir al que ya existe. Antes se abría el formulario sin más y acababa
+   * habiendo dos Big Ben.
+   */
+  const handleSearchSelect = (selected: SelectedPlace) => {
+    const existing = findExistingPlace(places, selected);
+    if (existing) setDuplicate(existing);
+    else setPendingPlace(selected);
   };
 
   const openPlace = (id: string) => {
@@ -96,7 +111,7 @@ export function MapScreen({ tripId }: { tripId: string }) {
 
         <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col gap-2 p-3">
           <div className="pointer-events-auto rounded-[var(--radius-md)] bg-surface shadow-[var(--shadow-md)] p-1.5">
-            <PlaceSearchBox onSelect={setPendingPlace} />
+            <PlaceSearchBox onSelect={handleSearchSelect} />
           </div>
           <div className="pointer-events-auto flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
             {visibleCategories.map((cat) => (
@@ -126,6 +141,34 @@ export function MapScreen({ tripId }: { tripId: string }) {
       <Sheet open={!!pendingPlace} onClose={() => setPendingPlace(null)} title="Nuevo lugar">
         {pendingPlace && (
           <PlaceForm tripId={tripId} fromSearch={pendingPlace} onDone={() => setPendingPlace(null)} />
+        )}
+      </Sheet>
+
+      <Sheet open={!!duplicate} onClose={() => setDuplicate(null)} title="Ya está en el viaje">
+        {duplicate && (
+          <div className="flex flex-col gap-4">
+            <p className="text-[15px]">
+              <span className="font-medium">{duplicate.name}</span> ya lo teníais guardado
+              {categoriesById.get(duplicate.category_id)
+                ? ` en ${categoriesById.get(duplicate.category_id)!.name}`
+                : ""}
+              , así que no se ha añadido otra vez.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  openPlace(duplicate.id);
+                  setDuplicate(null);
+                }}
+              >
+                Ver el lugar
+              </Button>
+              <Button variant="secondary" onClick={() => setDuplicate(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
         )}
       </Sheet>
     </div>
