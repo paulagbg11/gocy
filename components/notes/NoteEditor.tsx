@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pin, Plus, Trash2, X } from "lucide-react";
+import { Check, CheckCheck, Pin, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import clsx from "clsx";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button } from "@/components/ui/Button";
@@ -150,13 +150,13 @@ export function NoteEditor({ tripId, note, items, onClose }: NoteEditorProps) {
                     aria-pressed={item.done}
                     aria-label={item.done ? "Desmarcar" : "Marcar"}
                     className={clsx(
-                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border transition-colors duration-150 ease-out",
+                      "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors duration-150 ease-out",
                       item.done
                         ? "border-accent bg-accent text-accent-foreground"
                         : "border-foreground/25",
                     )}
                   >
-                    {item.done && <Check size={13} strokeWidth={3.5} />}
+                    {item.done && <Check size={14} strokeWidth={3.5} />}
                   </button>
                   <span
                     className={clsx(
@@ -179,7 +179,7 @@ export function NoteEditor({ tripId, note, items, onClose }: NoteEditorProps) {
             {isNew &&
               pendingItems.map((text, i) => (
                 <div key={`${text}-${i}`} className="flex items-center gap-2">
-                  <span className="h-5 w-5 shrink-0 rounded-[5px] border border-foreground/25" />
+                  <span className="h-[22px] w-[22px] shrink-0 rounded-[6px] border-2 border-foreground/25" />
                   <span className="min-w-0 flex-1 break-words text-[15px]">{text}</span>
                   <button
                     onClick={() => setPendingItems((prev) => prev.filter((_, j) => j !== i))}
@@ -240,18 +240,29 @@ export function NoteEditor({ tripId, note, items, onClose }: NoteEditorProps) {
         </div>
 
         {!isNew && (
-          <button
-            onClick={() => updateNote.mutate({ id: note.id, trip_id: tripId, pinned: !note.pinned })}
-            aria-pressed={note.pinned}
-            className="flex items-center gap-2 self-start text-[15px] font-medium text-muted-foreground"
-          >
-            <Pin
-              size={17}
-              className={note.pinned ? "text-accent" : ""}
-              fill={note.pinned ? "currentColor" : "none"}
-            />
-            {note.pinned ? "Fijada arriba del tablón" : "Fijar arriba del tablón"}
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => updateNote.mutate({ id: note.id, trip_id: tripId, pinned: !note.pinned })}
+              aria-pressed={note.pinned}
+              className="flex items-center gap-2 self-start text-[15px] font-medium text-muted-foreground"
+            >
+              <Pin
+                size={17}
+                className={note.pinned ? "text-accent" : ""}
+                fill={note.pinned ? "currentColor" : "none"}
+              />
+              {note.pinned ? "Fijada arriba del tablón" : "Fijar arriba del tablón"}
+            </button>
+            {/* Tachar no borra: la nota baja al final y se queda apagada. */}
+            <button
+              onClick={() => updateNote.mutate({ id: note.id, trip_id: tripId, done: !note.done })}
+              aria-pressed={note.done}
+              className="flex items-center gap-2 self-start text-[15px] font-medium text-muted-foreground"
+            >
+              {note.done ? <RotateCcw size={17} /> : <CheckCheck size={17} />}
+              {note.done ? "Devolver al tablón" : "Tachar: ya está hecha"}
+            </button>
+          </div>
         )}
 
         <div className="mt-1 flex items-center gap-2">

@@ -7,6 +7,22 @@ import { NoteCard } from "./NoteCard";
 import { NoteEditor } from "./NoteEditor";
 import type { Note, NoteItem } from "@/lib/supabase/types";
 
+/**
+ * Alto aproximado de un papel, para repartirlos entre las dos columnas sin
+ * medir nada en pantalla. No tiene que ser exacto: solo evitar que una columna
+ * quede mucho más larga que la otra.
+ */
+function weight(note: Note, items: NoteItem[]) {
+  return (
+    3 +
+    Math.ceil(note.title.length / 16) +
+    Math.ceil((note.body?.length ?? 0) / 22) +
+    Math.min(items.length, 4) * 2 +
+    (items.length > 4 ? 1 : 0) +
+    (note.url ? 1 : 0)
+  );
+}
+
 export function NotesScreen({ tripId }: { tripId: string }) {
   const { data: notes = [], isLoading } = useNotes(tripId);
   const { data: items = [] } = useNoteItems(tripId);
@@ -24,12 +40,33 @@ export function NotesScreen({ tripId }: { tripId: string }) {
     return map;
   }, [items]);
 
-  // Las fijadas arriba; dentro de cada grupo se mantiene el orden de la
-  // consulta, que ya viene de la más reciente a la más antigua.
-  const ordered = useMemo(
-    () => [...notes].sort((a, b) => Number(b.pinned) - Number(a.pinned)),
-    [notes],
-  );
+  /**
+   * Dos columnas repartidas a mano en vez de `columns-2`.
+   *
+   * Con columnas CSS el navegador partía la tarjeta entre una columna y la
+   * siguiente pese a `break-inside-avoid`, y dejaba en la segunda un trocito
+   * del borde: esa era la "línea rara" que aparecía al lado de la nota.
+   */
+  const columns = useMemo(() => {
+    const ordered = [...notes].sort(
+      (a, b) => Number(a.done) - Number(b.done) || Number(b.pinned) - Number(a.pinned),
+    );
+    const left: Note[] = [];
+    const right: Note[] = [];
+    let leftWeight = 0;
+    let rightWeight = 0;
+    for (const note of ordered) {
+      const w = weight(note, itemsByNote.get(note.id) ?? []);
+      if (leftWeight <= rightWeight) {
+        left.push(note);
+        leftWeight += w;
+      } else {
+        right.push(note);
+        rightWeight += w;
+      }
+    }
+    return [left, right];
+  }, [notes, itemsByNote]);
 
   const openEditor = (note: Note | null) => {
     setEditing(note);
@@ -50,38 +87,35 @@ export function NotesScreen({ tripId }: { tripId: string }) {
         </p>
         <button
           onClick={() => openEditor(null)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-[var(--shadow-md)]"
           aria-label="Nueva nota"
         >
-          <Plus size={18} />
+          <Plus size={20} />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 pt-1 pb-6">
         {isLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
 
-        {!isLoading && ordered.length === 0 && (
-          <div className="flex flex-col items-center gap-3 px-8 py-16 text-center">
+        {!isLoading && notes.length === 0 && (
+          <div className="flex flex-col items-center gap-3 px-8 py-20 text-center">
             <StickyNote size={30} className="text-muted-foreground" />
             <p className="font-medium">El tablón está vacío</p>
-            <p className="max-w-xs text-sm text-muted-foreground">
-              Apuntad aquí lo que no cabe en un lugar ni en un documento: sacar el ETA, qué
-              enchufes lleva el país, la lista de la maleta… Cada nota puede llevar un enlace y
-              sus propias casillas.
-            </p>
           </div>
         )}
 
-        {/* Columnas CSS en vez de rejilla: los papeles tienen alturas muy
-            distintas y así se encajan sin dejar huecos entre filas. */}
-        <div className="columns-2 gap-3 sm:columns-3">
-          {ordered.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              items={itemsByNote.get(note.id) ?? []}
-              onEdit={() => openEditor(note)}
-            />
+        <div className="flex items-start gap-3">
+          {columns.map((column, i) => (
+            <div key={i} className="flex min-w-0 flex-1 flex-col gap-3">
+              {column.map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  items={itemsByNote.get(note.id) ?? []}
+                  onEdit={() => openEditor(note)}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </div>

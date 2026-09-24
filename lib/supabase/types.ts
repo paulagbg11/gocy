@@ -162,6 +162,8 @@ export interface Note {
   /** Clave de la paleta de lib/notes.ts. */
   color: string;
   pinned: boolean;
+  /** Tachada: resuelta o ya no hace falta, pero se conserva. */
+  done: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
