@@ -152,3 +152,27 @@ export interface Attachment {
   size_bytes: number | null;
   created_at: string;
 }
+
+export interface Note {
+  id: string;
+  trip_id: string;
+  title: string;
+  body: string | null;
+  url: string | null;
+  /** Clave de la paleta de lib/notes.ts. */
+  color: string;
+  pinned: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoteItem {
+  id: string;
+  note_id: string;
+  trip_id: string;
+  text: string;
+  done: boolean;
+  sort_order: number;
+  created_at: string;
+}

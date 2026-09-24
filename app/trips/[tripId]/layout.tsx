@@ -3,7 +3,7 @@
 import { use } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Map, CalendarDays, FileText, Footprints, Settings } from "lucide-react";
+import { ArrowLeft, Map, CalendarDays, FileText, Footprints, Settings, StickyNote } from "lucide-react";
 import clsx from "clsx";
 import { useTrip } from "@/lib/queries/trips";
 import { useTripRealtime } from "@/lib/realtime/useTripRealtime";
@@ -14,6 +14,7 @@ const TABS = [
   { href: "days", label: "Días", icon: CalendarDays },
   { href: "estravel", label: "Estravel", icon: Footprints },
   { href: "docs", label: "Docs", icon: FileText },
+  { href: "notes", label: "Notas", icon: StickyNote },
 ];
 
 export default function TripLayout({
@@ -61,12 +62,12 @@ export default function TripLayout({
               key={tab.href}
               href={href}
               className={clsx(
-                "flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors duration-150 ease-out",
+                "flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors duration-150 ease-out",
                 active ? "text-accent" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon size={22} strokeWidth={active ? 2.4 : 2} />
-              {tab.label}
+              <Icon size={21} strokeWidth={active ? 2.4 : 2} />
+              <span className="truncate max-w-full px-0.5">{tab.label}</span>
             </Link>
           );
         })}
