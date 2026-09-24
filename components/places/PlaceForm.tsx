@@ -11,6 +11,14 @@ import { Button } from "@/components/ui/Button";
 import type { Place } from "@/lib/supabase/types";
 import type { SelectedPlace } from "@/components/map/PlaceSearchBox";
 
+/**
+ * Violación de unicidad de Postgres. Con el índice de 0009, dos móviles que
+ * guarden el mismo sitio a la vez llegan aquí: el aviso de la pantalla del
+ * mapa no puede cubrir esa carrera, pero el mensaje sí tiene que ser legible.
+ */
+const isDuplicateError = (err: unknown) =>
+  typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
+
 interface FormValues {
   name: string;
   category_id: string;
@@ -66,7 +74,8 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProp
       }
       onDone();
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : "No se pudo guardar");
+      if (isDuplicateError(err)) setServerError("Ese lugar ya está guardado en este viaje.");
+      else setServerError(err instanceof Error ? err.message : "No se pudo guardar");
     }
   };
 
