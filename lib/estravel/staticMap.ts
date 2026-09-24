@@ -93,17 +93,23 @@ const MUTED_STYLE = [
 ];
 
 /**
- * Descarga el mapa de fondo. Se trae con fetch y se convierte a bitmap: al
- * pasar por un blob deja de ser "de otro dominio" y el lienzo no queda
- * bloqueado, que es lo que impediría exportar la imagen.
+ * Descarga el mapa de fondo.
  *
- * Devuelve null si la Maps Static API no está habilitada, y entonces la imagen
- * se genera sobre fondo liso.
+ * Se trae con fetch y se pinta a través de un blob: al pasar por una URL
+ * `blob:` deja de ser "de otro dominio" y el lienzo no queda bloqueado, que es
+ * lo que impediría exportar la imagen.
+ *
+ * Se decodifica con un <img> y no con createImageBitmap: esa función falla o
+ * no existe en varias versiones de Safari de iOS, y ahí la imagen salía sin
+ * mapa de fondo sin dar ningún aviso.
+ *
+ * Devuelve null si no se pudo traer, y entonces la imagen se genera sobre
+ * fondo liso.
  */
 export async function fetchStaticMap(
   view: MapView,
   apiKey: string,
-): Promise<ImageBitmap | null> {
+): Promise<HTMLImageElement | null> {
   const params = new URLSearchParams({
     center: `${view.center.lat},${view.center.lng}`,
     zoom: String(view.zoom),
@@ -116,13 +122,27 @@ export async function fetchStaticMap(
     `https://maps.googleapis.com/maps/api/staticmap?${params}` +
     MUTED_STYLE.map((s) => `&style=${encodeURIComponent(s)}`).join("");
 
+  let objectUrl: string | null = null;
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
     const blob = await response.blob();
     if (!blob.type.startsWith("image/")) return null;
-    return await createImageBitmap(blob);
+    objectUrl = URL.createObjectURL(blob);
+    return await decodeImage(objectUrl);
   } catch {
     return null;
+  } finally {
+    // Ya decodificada, la imagen sigue siendo válida sin la URL.
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
+}
+
+function decodeImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("no se pudo decodificar el mapa"));
+    image.src = src;
+  });
 }

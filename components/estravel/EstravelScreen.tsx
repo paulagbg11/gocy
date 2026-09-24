@@ -25,6 +25,14 @@ import { MUTED_MAP_STYLE } from "./mapStyle";
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 const ACCENT = "#2f6f7e";
 
+/**
+ * Guion para los saltos entre días. En Google Maps una polilínea no puede ser
+ * discontinua por sí sola: se oculta la línea base y se repite este símbolo,
+ * que es la forma que da la propia API. Antes se dibujaban como una línea
+ * continua más clara y parecían un tramo de ruta mal calculado.
+ */
+const DASH = { path: "M 0,-1 0,1", strokeWeight: 3, scale: 3 } as const;
+
 const endpointIcon = (fill: string) =>
   `data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
@@ -57,6 +65,7 @@ function EstravelContent({ tripId }: { tripId: string }) {
   const [mode, setMode] = useState<RouteImageMode>("full");
   const [sharing, setSharing] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [shareNote, setShareNote] = useState<string | null>(null);
 
   const route = useMemo(
     () => buildRoute({ trackPoints, places, links, days }),
@@ -120,8 +129,9 @@ function EstravelContent({ tripId }: { tripId: string }) {
     if (!trip || !canRenderImage) return;
     setSharing(true);
     setShareError(null);
+    setShareNote(null);
     try {
-      const dataUrl = await renderRouteImage({
+      const rendered = await renderRouteImage({
         paths: drawablePaths,
         stops: mode === "clean" ? [] : visitedPlaces.map((p) => ({ lat: p.lat, lng: p.lng })),
         mode,
@@ -129,13 +139,19 @@ function EstravelContent({ tripId }: { tripId: string }) {
         tripName: trip.name,
         dateRange: formatDateRange(trip.start_date, trip.end_date),
       });
-      if (!dataUrl) {
+      if (!rendered) {
         setShareError("No se pudo generar la imagen.");
         return;
       }
       const filename = `${trip.name.replace(/[^\w\s-]/g, "").trim() || "viaje"}.png`;
-      const result = await shareOrDownloadImage(dataUrl, filename);
-      if (result === "failed") setShareError("No se pudo guardar la imagen.");
+      const result = await shareOrDownloadImage(rendered.dataUrl, filename);
+      if (result === "failed") {
+        setShareError("No se pudo guardar la imagen.");
+      } else if (!rendered.hasMapBackground) {
+        // Sin esto el fallo era mudo: salía la imagen de siempre, sobre fondo
+        // liso, y no había forma de saber que el mapa no había llegado.
+        setShareNote("La imagen se ha guardado sin el mapa de fondo: Google no lo ha servido.");
+      }
     } finally {
       setSharing(false);
     }
@@ -203,9 +219,10 @@ function EstravelContent({ tripId }: { tripId: string }) {
                   <Polyline
                     key={`dash-${i}`}
                     path={item.path}
-                    strokeColor={color}
-                    strokeOpacity={0.25}
-                    strokeWeight={3}
+                    strokeOpacity={0}
+                    icons={[
+                      { icon: { ...DASH, strokeColor: color, strokeOpacity: 0.55 }, repeat: "14px" },
+                    ]}
                   />
                 );
               }
@@ -267,6 +284,8 @@ function EstravelContent({ tripId }: { tripId: string }) {
 
         {shareError && <p className="text-xs text-danger mb-2">{shareError}</p>}
 
+        {shareNote && <p className="text-xs text-muted-foreground mb-2">{shareNote}</p>}
+
         {!canRenderImage && (
           <p className="text-xs text-muted-foreground mb-2">
             Con un solo punto todavía no hay trazado. Asigna algún lugar más a los días del
@@ -289,7 +308,7 @@ function EstravelContent({ tripId }: { tripId: string }) {
         <p className="text-xs text-muted-foreground">
           {route.source === "gps"
             ? "Recorrido aproximado: se registra mientras tenéis la app abierta durante el viaje. Los trazos discontinuos son desplazamientos en transporte."
-            : "Recorrido a partir de los lugares que asignasteis a cada día, en su orden. Si activáis la ubicación durante el viaje, aquí saldrá el camino real."}
+            : "Recorrido a partir de los lugares que asignasteis a cada día, en su orden. Los tramos discontinuos son el salto de la última parada de un día a la primera del siguiente, así que no se calculan por calles. Si activáis la ubicación durante el viaje, aquí saldrá el camino real."}
         </p>
       </div>
     </div>

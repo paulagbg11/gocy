@@ -16,6 +16,12 @@ const MAP_WASH = 0.55;
 
 export type RouteImageMode = "full" | "clean" | "days";
 
+export interface RenderedRoute {
+  dataUrl: string;
+  /** false si Google no sirvió el mapa: la imagen sale sobre fondo liso. */
+  hasMapBackground: boolean;
+}
+
 export interface DrawablePath {
   dayIndex: number | null;
   path: LatLng[];
@@ -45,7 +51,7 @@ export async function renderRouteImage({
   route: BuiltRoute;
   tripName: string;
   dateRange: string;
-}): Promise<string | null> {
+}): Promise<RenderedRoute | null> {
   const all = paths.flatMap((p) => p.path);
   if (all.length < 2) return null;
 
@@ -87,7 +93,6 @@ export async function renderRouteImage({
     ctx.globalAlpha = MAP_WASH;
     ctx.fillRect(areaX, areaTop, areaW, areaH);
     ctx.globalAlpha = 1;
-    mapImage.close();
   }
 
   const project = (p: LatLng) => {
@@ -211,5 +216,5 @@ export async function renderRouteImage({
     });
   }
 
-  return canvas.toDataURL("image/png");
+  return { dataUrl: canvas.toDataURL("image/png"), hasMapBackground: !!mapImage };
 }
