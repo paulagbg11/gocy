@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Map } from "@vis.gl/react-google-maps";
-import { ChevronDown, ChevronUp, Maximize2, Minimize2, Pencil, X } from "lucide-react";
+import { ChevronDown, ChevronUp, EyeOff, Map as MapIcon, Maximize2, Minimize2, Pencil, X } from "lucide-react";
 import clsx from "clsx";
 import { MapProvider } from "@/components/map/MapProvider";
 import { CategoryPin } from "@/components/map/CategoryPin";
@@ -10,8 +10,12 @@ import { RoutePolyline } from "@/components/map/RoutePolyline";
 import { FitBounds } from "@/components/map/FitBounds";
 import { MapResizeFix } from "@/components/map/MapResizeFix";
 import { useCategoriesById } from "@/lib/queries/categories";
-import { useSaveDayPlan, useUnassignPlaceFromDay, type DayPlanPatch } from "@/lib/queries/place-day-links";
-import { useUpdatePlace } from "@/lib/queries/places";
+import {
+  usePlaceDayLinks,
+  useSaveDayPlan,
+  useUnassignPlaceFromDay,
+  type DayPlanPatch,
+} from "@/lib/queries/place-day-links";
 import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
 import {
   moveEntry,
@@ -30,7 +34,30 @@ import type { TransitStep, TripDay } from "@/lib/supabase/types";
 
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 
-type MapSize = "compact" | "half" | "full";
+type MapSize = "hidden" | "compact" | "half" | "full";
+
+/**
+ * Se recuerda en el móvil si el mapa se dejó cerrado: quien planifica solo
+ * con la lista no quiere cerrarlo cada vez que cambia de día.
+ */
+const MAP_HIDDEN_KEY = "gocy:day-map-hidden";
+
+function readMapHidden() {
+  try {
+    return localStorage.getItem(MAP_HIDDEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberMapHidden(hidden: boolean) {
+  try {
+    if (hidden) localStorage.setItem(MAP_HIDDEN_KEY, "1");
+    else localStorage.removeItem(MAP_HIDDEN_KEY);
+  } catch {
+    // Sin almacenamiento (modo privado…): simplemente no se recuerda.
+  }
+}
 
 /** Más arriba que abajo: la gota del pin sobresale ~44 px por encima de su punto. */
 const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
@@ -42,7 +69,8 @@ const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
  * El mapa va pequeño por defecto (antes se comía media pantalla y la lista no
  * se leía) y se amplía en dos pasos: media pantalla, con la lista debajo, y
  * pantalla completa, tapando también cabecera y pestañas. Ampliado, cada pin
- * lleva debajo su número y su nombre.
+ * lleva debajo su número y su nombre. También se puede cerrar del todo y
+ * quedarse solo con la planificación.
  */
 export function DayItinerary({
   entries,
@@ -57,21 +85,39 @@ export function DayItinerary({
 }) {
   const categoriesById = useCategoriesById();
   const savePlan = useSaveDayPlan();
-  const updatePlace = useUpdatePlace();
+  const { data: allLinks = [] } = usePlaceDayLinks(tripId);
   const unassign = useUnassignPlaceFromDay();
-  const [mapSize, setMapSize] = useState<MapSize>("compact");
+  // Este componente solo se pinta en el cliente (necesita los días, que vienen
+  // de Supabase), así que se puede leer localStorage al crear el estado.
+  const [mapSize, setMapSizeState] = useState<MapSize>(() =>
+    readMapHidden() ? "hidden" : "compact",
+  );
+  const setMapSize = (size: MapSize) => {
+    setMapSizeState(size);
+    rememberMapHidden(size === "hidden");
+  };
   const fullscreen = mapSize === "full";
   const [editing, setEditing] = useState<ItineraryEntry | null>(null);
 
   const sequence = useMemo(() => sortItinerary(entries), [entries]);
+
+  /** Las otras veces que este lugar sale en el viaje (otros días). */
+  const otherVisitsOf = (entry: ItineraryEntry) =>
+    allLinks.filter((l) => l.place_id === entry.place.id && l.id !== entry.link.id);
   const points = sequence.map(({ place }) => ({ lat: place.lat, lng: place.lng }));
 
-  const saveSequence = (next: ItineraryEntry[], extra: DayPlanPatch[] = []) => {
+  const saveSequence = (
+    next: ItineraryEntry[],
+    extra: DayPlanPatch[] = [],
+    options?: Parameters<typeof savePlan.mutate>[1],
+  ) => {
     const patches = new globalThis.Map<string, DayPlanPatch>();
     for (const p of [...orderPatches(next), ...extra]) {
       patches.set(p.id, { ...patches.get(p.id), ...p });
     }
-    if (patches.size > 0) savePlan.mutate({ trip_id: tripId, patches: [...patches.values()] });
+    if (patches.size > 0) {
+      savePlan.mutate({ trip_id: tripId, patches: [...patches.values()] }, options);
+    }
   };
 
   const move = (index: number, direction: -1 | 1) =>
@@ -82,33 +128,42 @@ export function DayItinerary({
     time: string,
     notes: string,
     transit: TransitStep[] | null,
+    copyNotesToAllVisits: boolean,
   ) => {
+    const extra: DayPlanPatch[] = [];
+    let next = sequence;
+
     const scheduledAt = time ? timeValueToIso(day.date, time) : null;
-    if (JSON.stringify(transit) !== JSON.stringify(entry.link.transit ?? null)) {
-      savePlan.mutate(
-        { trip_id: tripId, patches: [{ id: entry.link.id, transit }] },
-        {
-          // Sin la columna de 0011_stop_transit.sql, Supabase rechaza el
-          // cambio y el trayecto desaparecería sin decir nada.
-          onError: () =>
-            alert(
-              "No se ha podido guardar el trayecto. Si es la primera vez, falta ejecutar la migración 0011 en Supabase.",
-            ),
-        },
-      );
-    }
     if (scheduledAt !== entry.link.scheduled_at) {
       // Con hora nueva, se recoloca entre las demás horas; al quitarla, se
       // queda en su sitio y pasa a poder moverse con las flechas.
       const updated = sequence.map((e) =>
         e.link.id === entry.link.id ? { ...e, link: { ...e.link, scheduled_at: scheduledAt } } : e,
       );
-      const next = scheduledAt ? placeByTime(updated, entry.link.id, Date.parse(scheduledAt)) : updated;
-      saveSequence(next, [{ id: entry.link.id, scheduled_at: scheduledAt }]);
+      next = scheduledAt ? placeByTime(updated, entry.link.id, Date.parse(scheduledAt)) : updated;
+      extra.push({ id: entry.link.id, scheduled_at: scheduledAt });
     }
-    if (notes.trim() !== (entry.place.notes ?? "").trim()) {
-      updatePlace.mutate({ id: entry.place.id, trip_id: tripId, notes: notes.trim() || null });
+
+    if (JSON.stringify(transit) !== JSON.stringify(entry.link.transit ?? null)) {
+      extra.push({ id: entry.link.id, transit });
     }
+
+    const newNotes = notes.trim() || null;
+    if (newNotes !== (stopNotes(entry) ?? null) || copyNotesToAllVisits) {
+      extra.push({ id: entry.link.id, notes: newNotes });
+      if (copyNotesToAllVisits) {
+        for (const other of otherVisitsOf(entry)) extra.push({ id: other.id, notes: newNotes });
+      }
+    }
+
+    saveSequence(next, extra, {
+      // Sin las columnas de 0011 (trayectos) o 0012 (notas por día), Supabase
+      // rechaza el cambio y se desharía sin decir nada.
+      onError: () =>
+        alert(
+          "No se ha podido guardar. Si es la primera vez que usas trayectos o notas por día, falta ejecutar las migraciones 0011 y 0012 en Supabase.",
+        ),
+    });
     setEditing(null);
   };
 
@@ -119,71 +174,86 @@ export function DayItinerary({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Es el mismo mapa en los tres tamaños: solo cambia su caja, así no se
-          vuelve a cargar al ampliarlo. */}
-      <div
-        className={clsx(
-          fullscreen ? "fixed inset-0 z-40 bg-surface" : "relative shrink-0",
-          mapSize === "compact" && "h-44",
-          mapSize === "half" && "h-[55%]",
-        )}
-      >
-        <MapProvider>
-          <Map
-            className="h-full w-full"
-            defaultCenter={DEFAULT_CENTER}
-            defaultZoom={12}
-            gestureHandling="greedy"
-            disableDefaultUI
-            zoomControl={fullscreen}
-          >
-            <MapResizeFix />
-            {/* Se reencuadra también al cambiar el tamaño del mapa. */}
-            <FitBounds
-              points={points}
-              fitKey={`${mapSize}|${points.map((p) => `${p.lat},${p.lng}`).join("|")}`}
-              padding={mapSize === "compact" ? COMPACT_MAP_PADDING : 64}
-            />
-            <RoutePolyline path={points} />
-            {sequence.map(({ place, link }, i) => (
-              <CategoryPin
-                key={link.id}
-                place={place}
-                category={categoriesById.get(place.category_id)}
-                order={i + 1}
-                // En el mapa del día los nombres van siempre que haya sitio
-                // (no solo al acercarse): son pocas paradas y es la forma de
-                // saber qué es cada una. En el mapa pequeño, solo el número.
-                showName={mapSize !== "compact"}
-                onClick={() => onOpenPlace(place.id)}
-              />
-            ))}
-          </Map>
-        </MapProvider>
-        {fullscreen ? (
-          <button
-            onClick={() => setMapSize("half")}
-            aria-label="Salir de pantalla completa"
-            className="absolute right-3 top-[calc(env(safe-area-inset-top)+12px)] rounded-full bg-surface p-2.5 shadow-[var(--shadow-md)] text-foreground"
-          >
-            <X size={20} />
-          </button>
-        ) : (
-          <div className="absolute bottom-2 right-2 flex gap-2">
-            {mapSize === "half" && (
-              <MapButton label="Reducir mapa" onClick={() => setMapSize("compact")}>
-                <Minimize2 size={18} />
-              </MapButton>
-            )}
-            <MapButton
-              label={mapSize === "compact" ? "Ampliar mapa" : "Pantalla completa"}
-              onClick={() => setMapSize(mapSize === "compact" ? "half" : "full")}
+      {mapSize === "hidden" ? (
+        <button
+          onClick={() => setMapSize("compact")}
+          className="mx-4 mb-1 flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-surface-2 py-2 text-sm font-medium text-muted-foreground"
+        >
+          <MapIcon size={16} />
+          Mostrar mapa
+        </button>
+      ) : (
+        // Es el mismo mapa en los tres tamaños: solo cambia su caja, así no se
+        // vuelve a cargar al ampliarlo.
+        <div
+          className={clsx(
+            fullscreen ? "fixed inset-0 z-40 bg-surface" : "relative shrink-0",
+            mapSize === "compact" && "h-44",
+            mapSize === "half" && "h-[55%]",
+          )}
+        >
+          <MapProvider>
+            <Map
+              className="h-full w-full"
+              defaultCenter={DEFAULT_CENTER}
+              defaultZoom={12}
+              gestureHandling="greedy"
+              disableDefaultUI
+              zoomControl={fullscreen}
             >
-              <Maximize2 size={18} />
-            </MapButton>
-          </div>
-        )}
-      </div>
+              <MapResizeFix />
+              {/* Se reencuadra también al cambiar el tamaño del mapa. */}
+              <FitBounds
+                points={points}
+                fitKey={`${mapSize}|${points.map((p) => `${p.lat},${p.lng}`).join("|")}`}
+                padding={mapSize === "compact" ? COMPACT_MAP_PADDING : 64}
+              />
+              <RoutePolyline path={points} />
+              {sequence.map(({ place, link }, i) => (
+                <CategoryPin
+                  key={link.id}
+                  place={place}
+                  category={categoriesById.get(place.category_id)}
+                  order={i + 1}
+                  // En el mapa del día los nombres van siempre que haya sitio
+                  // (no solo al acercarse): son pocas paradas y es la forma de
+                  // saber qué es cada una. En el mapa pequeño, solo el número.
+                  showName={mapSize !== "compact"}
+                  onClick={() => onOpenPlace(place.id)}
+                />
+              ))}
+            </Map>
+          </MapProvider>
+          {fullscreen ? (
+            <button
+              onClick={() => setMapSize("half")}
+              aria-label="Salir de pantalla completa"
+              className="absolute right-3 top-[calc(env(safe-area-inset-top)+12px)] rounded-full bg-surface p-2.5 shadow-[var(--shadow-md)] text-foreground"
+            >
+              <X size={20} />
+            </button>
+          ) : (
+            <div className="absolute bottom-2 right-2 flex gap-2">
+              {mapSize === "compact" && (
+                <MapButton label="Cerrar mapa" onClick={() => setMapSize("hidden")}>
+                  <EyeOff size={18} />
+                </MapButton>
+              )}
+              {mapSize === "half" && (
+                <MapButton label="Reducir mapa" onClick={() => setMapSize("compact")}>
+                  <Minimize2 size={18} />
+                </MapButton>
+              )}
+              <MapButton
+                label={mapSize === "compact" ? "Ampliar mapa" : "Pantalla completa"}
+                onClick={() => setMapSize(mapSize === "compact" ? "half" : "full")}
+              >
+                <Maximize2 size={18} />
+              </MapButton>
+            </div>
+          )}
+        </div>
+      )}
 
       <div
         className={clsx(
@@ -214,12 +284,22 @@ export function DayItinerary({
         isTransport={
           !!editing && isTransportCategory(categoriesById.get(editing.place.category_id))
         }
+        otherVisits={editing ? otherVisitsOf(editing).length : 0}
         onClose={() => setEditing(null)}
         onSave={saveStop}
         onRemove={removeStop}
       />
     </div>
   );
+}
+
+/**
+ * La nota de la parada en este día. Si aún no se ha ejecutado la migración
+ * 0012 la columna no existe (undefined) y se enseña la del lugar, como antes,
+ * para que no desaparezcan las notas que ya había.
+ */
+function stopNotes(entry: ItineraryEntry) {
+  return entry.link.notes === undefined ? entry.place.notes : entry.link.notes;
 }
 
 function MapButton({
@@ -264,7 +344,7 @@ function StopRow({
   // Solo se mueven a mano las paradas sin hora: las que tienen hora las
   // coloca la propia hora.
   const timed = timeOf(entry) !== null;
-  const notes = entry.place.notes?.trim();
+  const notes = stopNotes(entry)?.trim();
   const transit = entry.link.transit;
 
   return (

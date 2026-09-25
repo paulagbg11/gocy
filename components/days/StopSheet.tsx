@@ -13,14 +13,29 @@ interface StopSheetProps {
   entry: ItineraryEntry | null;
   /** Aeropuerto, estación…: el trayecto sale ya abierto. */
   isTransport: boolean;
+  /** En cuántos otros días aparece este lugar (para ofrecer copiar la nota). */
+  otherVisits: number;
   onClose: () => void;
   /** `time` es "HH:mm", o "" para dejar la parada sin hora. */
-  onSave: (entry: ItineraryEntry, time: string, notes: string, transit: TransitStep[] | null) => void;
+  onSave: (
+    entry: ItineraryEntry,
+    time: string,
+    notes: string,
+    transit: TransitStep[] | null,
+    copyNotesToAllVisits: boolean,
+  ) => void;
   onRemove: (entry: ItineraryEntry) => void;
 }
 
 /** Hora, trayecto y nota de una parada del día. */
-export function StopSheet({ entry, isTransport, onClose, onSave, onRemove }: StopSheetProps) {
+export function StopSheet({
+  entry,
+  isTransport,
+  otherVisits,
+  onClose,
+  onSave,
+  onRemove,
+}: StopSheetProps) {
   return (
     <Sheet open={!!entry} onClose={onClose} title={entry?.place.name}>
       {/* key: al abrir otra parada, el formulario empieza con sus valores. */}
@@ -29,6 +44,7 @@ export function StopSheet({ entry, isTransport, onClose, onSave, onRemove }: Sto
           key={entry.link.id}
           entry={entry}
           isTransport={isTransport}
+          otherVisits={otherVisits}
           onSave={onSave}
           onRemove={onRemove}
         />
@@ -40,18 +56,27 @@ export function StopSheet({ entry, isTransport, onClose, onSave, onRemove }: Sto
 function StopForm({
   entry,
   isTransport,
+  otherVisits,
   onSave,
   onRemove,
 }: {
   entry: ItineraryEntry;
   isTransport: boolean;
+  otherVisits: number;
   onSave: StopSheetProps["onSave"];
   onRemove: StopSheetProps["onRemove"];
 }) {
   const [time, setTime] = useState(
     entry.link.scheduled_at ? toLocalTimeValue(entry.link.scheduled_at) : "",
   );
-  const [notes, setNotes] = useState(entry.place.notes ?? "");
+  // Sin la migración 0012 la parada no tiene nota propia (undefined) y se
+  // parte de la del lugar, que es la que se veía hasta ahora.
+  const [notes, setNotes] = useState(
+    (entry.link.notes === undefined ? entry.place.notes : entry.link.notes) ?? "",
+  );
+  // Por defecto la nota es solo de este día: la del check-in del hotel no
+  // pinta nada en los demás.
+  const [copyToAll, setCopyToAll] = useState(false);
   // En una estación sin trayecto todavía, se empieza con un tramo en blanco
   // para que los campos ya estén a la vista. Si se deja vacío, no se guarda.
   const [transit, setTransit] = useState<TransitStep[]>(
@@ -63,7 +88,7 @@ function StopForm({
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave(entry, time, notes, cleanSteps(transit));
+        onSave(entry, time, notes, cleanSteps(transit), copyToAll);
       }}
     >
       <div>
@@ -102,8 +127,22 @@ function StopForm({
           placeholder="Entradas, qué pedir, por dónde entrar…"
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Son las notas del lugar: también salen en su ficha del mapa.
+          Solo para este día. Las notas generales del lugar están en su ficha del mapa.
         </p>
+        {otherVisits > 0 && (
+          <label className="mt-2 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={copyToAll}
+              onChange={(e) => setCopyToAll(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+            />
+            <span>
+              Copiar también a {otherVisits === 1 ? "el otro día" : `los otros ${otherVisits} días`} en
+              que está este lugar
+            </span>
+          </label>
+        )}
       </div>
 
       <div className="flex gap-2 mt-1">

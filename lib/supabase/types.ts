@@ -89,6 +89,11 @@ export interface PlaceDayLink {
   scheduled_at: string | null;
   /** Opcional: no existe hasta ejecutar la migración 0011. */
   transit?: TransitStep[] | null;
+  /**
+   * Nota de esta parada en este día (0012). `undefined` si la migración aún no
+   * se ha ejecutado: entonces se enseña la nota del lugar, como antes.
+   */
+  notes?: string | null;
   created_at: string;
 }
 
