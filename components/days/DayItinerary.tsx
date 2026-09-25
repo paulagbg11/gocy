@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Map } from "@vis.gl/react-google-maps";
-import { ChevronDown, ChevronUp, Maximize2, Minimize2, Pencil } from "lucide-react";
+import { ChevronDown, ChevronUp, List, Maximize2, Pencil } from "lucide-react";
 import clsx from "clsx";
 import { MapProvider } from "@/components/map/MapProvider";
 import { CategoryPin } from "@/components/map/CategoryPin";
@@ -28,6 +28,17 @@ import type { TripDay } from "@/lib/supabase/types";
 
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 
+/**
+ * Sin los iconos de Google (tiendas, restaurantes, metro…): en el mapa del día
+ * solo importan vuestras paradas y la ruta, y con todo eso encima el
+ * recorrido se veía borroso.
+ */
+const CLEAN_MAP_STYLES: google.maps.MapTypeStyle[] = [
+  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.business", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+];
+
 /** Más arriba que abajo: la gota del pin sobresale ~44 px por encima de su punto. */
 const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
 
@@ -36,7 +47,7 @@ const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
  * dos con el mismo orden y la misma numeración.
  *
  * El mapa va pequeño por defecto (antes se comía media pantalla y la lista no
- * se leía) y se puede ampliar con el botón de la esquina.
+ * se leía). Ampliado ocupa todo el día, sin la lista, para ver bien el recorrido.
  */
 export function DayItinerary({
   entries,
@@ -97,7 +108,7 @@ export function DayItinerary({
       <div
         className={clsx(
           "relative shrink-0",
-          mapExpanded ? "h-[55%]" : "h-44",
+          mapExpanded ? "flex-1 min-h-0" : "h-44",
         )}
       >
         <MapProvider>
@@ -107,6 +118,8 @@ export function DayItinerary({
             defaultZoom={12}
             gestureHandling="greedy"
             disableDefaultUI
+            zoomControl={mapExpanded}
+            styles={CLEAN_MAP_STYLES}
           >
             <MapResizeFix />
             {/* Se reencuadra también al ampliar o reducir el mapa. */}
@@ -127,16 +140,31 @@ export function DayItinerary({
             ))}
           </Map>
         </MapProvider>
-        <button
-          onClick={() => setMapExpanded((v) => !v)}
-          aria-label={mapExpanded ? "Reducir mapa" : "Ampliar mapa"}
-          className="absolute bottom-2 right-2 rounded-full bg-surface p-2 shadow-[var(--shadow-md)] text-foreground"
-        >
-          {mapExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-        </button>
+        {mapExpanded ? (
+          <button
+            onClick={() => setMapExpanded(false)}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-surface px-4 py-2.5 text-sm font-medium shadow-[var(--shadow-md)]"
+          >
+            <List size={16} />
+            Ver lista
+          </button>
+        ) : (
+          <button
+            onClick={() => setMapExpanded(true)}
+            aria-label="Ampliar mapa"
+            className="absolute bottom-2 right-2 rounded-full bg-surface p-2 shadow-[var(--shadow-md)] text-foreground"
+          >
+            <Maximize2 size={18} />
+          </button>
+        )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 px-4 py-3">
+      <div
+        className={clsx(
+          "flex-1 min-h-0 overflow-y-auto flex-col gap-2 px-4 py-3",
+          mapExpanded ? "hidden" : "flex",
+        )}
+      >
         {sequence.length === 0 && (
           <p className="text-sm text-muted-foreground">Nada asignado a este día todavía.</p>
         )}
