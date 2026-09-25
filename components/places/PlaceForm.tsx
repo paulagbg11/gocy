@@ -30,9 +30,11 @@ interface PlaceFormProps {
   editing?: Place;
   fromSearch?: SelectedPlace;
   onDone: () => void;
+  /** Tras borrar; si no se pasa, se usa onDone. */
+  onDeleted?: () => void;
 }
 
-export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProps) {
+export function PlaceForm({ tripId, editing, fromSearch, onDone, onDeleted }: PlaceFormProps) {
   const { activeProfile } = useProfile();
   const createPlace = useCreatePlace();
   const updatePlace = useUpdatePlace();
@@ -83,7 +85,7 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone }: PlaceFormProp
     if (!editing) return;
     if (!confirm(`¿Borrar "${editing.name}"? También se quitará de los días asignados.`)) return;
     await deletePlace.mutateAsync({ id: editing.id, trip_id: tripId });
-    onDone();
+    (onDeleted ?? onDone)();
   };
 
   return (

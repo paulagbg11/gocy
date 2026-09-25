@@ -26,6 +26,13 @@ import type { Place } from "@/lib/supabase/types";
 
 // Centro por defecto (Madrid) mientras no hay pines o no se ha resuelto la ubicación.
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
+const DEFAULT_ZOOM = 12;
+
+/**
+ * A partir de este zoom (unos pocos barrios a la vista) los pines llevan el nombre debajo.
+ * Más alejado, con todo el viaje a la vista, los nombres se pisarían entre sí.
+ */
+const NAMES_MIN_ZOOM = 14;
 
 export function MapScreen({ tripId }: { tripId: string }) {
   const { data: places = [] } = usePlaces(tripId);
@@ -38,6 +45,8 @@ export function MapScreen({ tripId }: { tripId: string }) {
   const [pendingPlace, setPendingPlace] = useState<SelectedPlace | null>(null);
   const [duplicate, setDuplicate] = useState<Place | null>(null);
   const [promptDismissed, setPromptDismissed] = useState(false);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const showNames = zoom >= NAMES_MIN_ZOOM;
 
   // El punto en vivo solo tiene sentido durante los días del viaje: fuera de
   // esas fechas el mapa se comporta como siempre.
@@ -90,7 +99,8 @@ export function MapScreen({ tripId }: { tripId: string }) {
         <Map
           className="flex-1 min-h-0 w-full"
           defaultCenter={DEFAULT_CENTER}
-          defaultZoom={12}
+          defaultZoom={DEFAULT_ZOOM}
+          onZoomChanged={(e) => setZoom(e.detail.zoom)}
           gestureHandling="greedy"
           disableDefaultUI
           zoomControl
@@ -104,6 +114,7 @@ export function MapScreen({ tripId }: { tripId: string }) {
               key={place.id}
               place={place}
               category={categoriesById.get(place.category_id)}
+              showName={showNames}
               onClick={() => openPlace(place.id)}
             />
           ))}

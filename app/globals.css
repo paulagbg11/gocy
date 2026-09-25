@@ -126,3 +126,16 @@ input::-webkit-calendar-picker-indicator {
 html {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Nombre del sitio bajo los pines del mapa. Va en una pastilla blanca con
+   sombra para que no se confunda con los rótulos del propio mapa de Google,
+   que son texto suelto sin fondo. */
+.pin-name {
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.3),
+    0 0 0 1px rgb(0 0 0 / 0.06);
+  white-space: nowrap;
+}
