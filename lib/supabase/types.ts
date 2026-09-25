@@ -58,6 +58,28 @@ export interface Place {
   updated_at: string;
 }
 
+export type TransitMode = "metro" | "train" | "bus" | "tram" | "boat" | "walk";
+
+/** Un tramo de trayecto desde una parada del día (ver 0011_stop_transit.sql). */
+export interface TransitStep {
+  mode: TransitMode;
+  /** "Victoria", "Suffragette", "Stansted Express"… */
+  line?: string;
+  /** Color de la línea, en hex. */
+  color?: string;
+  /** Hacia dónde va: lo que pone en el andén o en el tren. */
+  direction?: string;
+  /** Dónde subir. */
+  from?: string;
+  /** Dónde bajar. */
+  to?: string;
+  stops?: number;
+  minutes?: number;
+  /** Andén o vía. */
+  platform?: string;
+  note?: string;
+}
+
 export interface PlaceDayLink {
   id: string;
   trip_id: string;
@@ -65,6 +87,8 @@ export interface PlaceDayLink {
   day_id: string;
   order_in_day: number | null;
   scheduled_at: string | null;
+  /** Opcional: no existe hasta ejecutar la migración 0011. */
+  transit?: TransitStep[] | null;
   created_at: string;
 }
 

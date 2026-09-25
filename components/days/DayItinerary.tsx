@@ -24,7 +24,9 @@ import {
   type ItineraryEntry,
 } from "@/lib/days/itinerary";
 import { StopSheet } from "./StopSheet";
-import type { TripDay } from "@/lib/supabase/types";
+import { TransitSteps } from "./TransitSteps";
+import { isTransportCategory } from "@/lib/days/transit";
+import type { TransitStep, TripDay } from "@/lib/supabase/types";
 
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 
@@ -75,8 +77,26 @@ export function DayItinerary({
   const move = (index: number, direction: -1 | 1) =>
     saveSequence(moveEntry(sequence, index, direction));
 
-  const saveStop = (entry: ItineraryEntry, time: string, notes: string) => {
+  const saveStop = (
+    entry: ItineraryEntry,
+    time: string,
+    notes: string,
+    transit: TransitStep[] | null,
+  ) => {
     const scheduledAt = time ? timeValueToIso(day.date, time) : null;
+    if (JSON.stringify(transit) !== JSON.stringify(entry.link.transit ?? null)) {
+      savePlan.mutate(
+        { trip_id: tripId, patches: [{ id: entry.link.id, transit }] },
+        {
+          // Sin la columna de 0011_stop_transit.sql, Supabase rechaza el
+          // cambio y el trayecto desaparecería sin decir nada.
+          onError: () =>
+            alert(
+              "No se ha podido guardar el trayecto. Si es la primera vez, falta ejecutar la migración 0011 en Supabase.",
+            ),
+        },
+      );
+    }
     if (scheduledAt !== entry.link.scheduled_at) {
       // Con hora nueva, se recoloca entre las demás horas; al quitarla, se
       // queda en su sitio y pasa a poder moverse con las flechas.
@@ -191,6 +211,9 @@ export function DayItinerary({
 
       <StopSheet
         entry={editing}
+        isTransport={
+          !!editing && isTransportCategory(categoriesById.get(editing.place.category_id))
+        }
         onClose={() => setEditing(null)}
         onSave={saveStop}
         onRemove={removeStop}
@@ -242,61 +265,71 @@ function StopRow({
   // coloca la propia hora.
   const timed = timeOf(entry) !== null;
   const notes = entry.place.notes?.trim();
+  const transit = entry.link.transit;
 
   return (
-    <div className="flex items-center gap-2.5 rounded-[var(--radius-sm)] bg-surface pl-1.5 pr-2 py-2.5 shadow-[var(--shadow-sm)]">
-      <div className="flex w-6 shrink-0 flex-col items-center">
-        {!timed && (
-          <>
-            <button
-              onClick={onMoveUp}
-              disabled={!onMoveUp}
-              className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
-              aria-label="Subir"
-            >
-              <ChevronUp size={18} />
-            </button>
-            <button
-              onClick={onMoveDown}
-              disabled={!onMoveDown}
-              className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
-              aria-label="Bajar"
-            >
-              <ChevronDown size={18} />
-            </button>
-          </>
-        )}
-      </div>
+    <div className="rounded-[var(--radius-sm)] bg-surface pl-1.5 pr-2 py-2.5 shadow-[var(--shadow-sm)]">
+      <div className="flex items-center gap-2.5">
+        <div className="flex w-6 shrink-0 flex-col items-center">
+          {!timed && (
+            <>
+              <button
+                onClick={onMoveUp}
+                disabled={!onMoveUp}
+                className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                aria-label="Subir"
+              >
+                <ChevronUp size={18} />
+              </button>
+              <button
+                onClick={onMoveDown}
+                disabled={!onMoveDown}
+                className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                aria-label="Bajar"
+              >
+                <ChevronDown size={18} />
+              </button>
+            </>
+          )}
+        </div>
 
-      <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-        style={{ background: color }}
-      >
-        {order}
-      </span>
-
-      <button onClick={onOpen} className="flex-1 min-w-0 text-left">
-        <span className="flex items-center gap-1.5">
-          <span className="shrink-0">{emoji}</span>
-          <span className="truncate text-[15px] font-medium">{entry.place.name}</span>
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+          style={{ background: color }}
+        >
+          {order}
         </span>
-        {notes && (
-          <span className="mt-0.5 block whitespace-pre-line text-[13px] leading-snug text-muted-foreground line-clamp-3">
-            {notes}
-          </span>
-        )}
-      </button>
 
-      <button
-        onClick={onEdit}
-        aria-label="Hora y notas"
-        className={clsx(
-          "flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-sm tabular-nums",
-          timed ? "bg-accent/10 font-semibold text-accent" : "text-muted-foreground bg-surface-2",
-        )}
-      >
-        {timed ? toLocalTimeValue(entry.link.scheduled_at!) : <Pencil size={14} />}
-      </button>
+        <button onClick={onOpen} className="flex-1 min-w-0 text-left">
+          <span className="flex items-center gap-1.5">
+            <span className="shrink-0">{emoji}</span>
+            <span className="truncate text-[15px] font-medium">{entry.place.name}</span>
+          </span>
+          {notes && (
+            <span className="mt-0.5 block whitespace-pre-line text-[13px] leading-snug text-muted-foreground line-clamp-3">
+              {notes}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={onEdit}
+          aria-label="Hora, trayecto y notas"
+          className={clsx(
+            "flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-sm tabular-nums",
+            timed ? "bg-accent/10 font-semibold text-accent" : "text-muted-foreground bg-surface-2",
+          )}
+        >
+          {timed ? toLocalTimeValue(entry.link.scheduled_at!) : <Pencil size={14} />}
+        </button>
+      </div>
+      {/* El trayecto va a todo el ancho de la tarjeta y en grande: es lo que
+          se mira con prisa en el andén. */}
+      {transit && transit.length > 0 && (
+        <div className="mt-2.5 pl-1.5">
+          <TransitSteps steps={transit} />
+        </div>
+      )}
     </div>
   );
 }

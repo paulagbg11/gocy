@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { PlaceDayLink } from "@/lib/supabase/types";
+import type { PlaceDayLink, TransitStep } from "@/lib/supabase/types";
 
 export function usePlaceDayLinks(tripId: string) {
   return useQuery({
@@ -85,6 +85,7 @@ export interface DayPlanPatch {
   id: string;
   order_in_day?: number;
   scheduled_at?: string | null;
+  transit?: TransitStep[] | null;
 }
 
 /**

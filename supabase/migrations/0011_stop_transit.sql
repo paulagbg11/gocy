@@ -1,0 +1,11 @@
+-- GoCy: trayectos en transporte público desde una parada del día.
+--
+-- Cada parada de un día puede llevar los tramos para llegar a la siguiente
+-- (metro, tren, bus…): línea, color, dirección, dónde subir y bajar, paradas,
+-- minutos y andén. Van en la parada del día y no en el lugar, porque desde la
+-- misma estación el camino depende de a dónde se vaya ese día.
+--
+-- Es una lista de objetos, así que va en jsonb: no hace falta consultarla por
+-- dentro, solo leerla y escribirla entera. La tabla ya está en la publicación
+-- de Realtime, y las columnas nuevas se sincronizan solas.
+alter table place_day_links add column if not exists transit jsonb;
