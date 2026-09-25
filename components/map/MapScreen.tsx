@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Map } from "@vis.gl/react-google-maps";
 import { usePlaces } from "@/lib/queries/places";
@@ -11,6 +11,8 @@ import { MapProvider } from "./MapProvider";
 import { CategoryPin } from "./CategoryPin";
 import { FitBounds } from "./FitBounds";
 import { MapResizeFix } from "./MapResizeFix";
+import { FocusPlace, type FocusTarget } from "./FocusPlace";
+import { ZoomWatcher } from "./ZoomWatcher";
 import { DestinationCenter } from "./DestinationCenter";
 import { PlaceSearchBox, type SelectedPlace } from "./PlaceSearchBox";
 import { LiveLocationMarker } from "./LiveLocationMarker";
@@ -34,6 +36,9 @@ const DEFAULT_ZOOM = 12;
  */
 const NAMES_MIN_ZOOM = 14;
 
+/** Tiempo que el pin recién añadido (o buscado) se queda resaltado. */
+const HIGHLIGHT_MS = 4000;
+
 export function MapScreen({ tripId }: { tripId: string }) {
   const { data: places = [] } = usePlaces(tripId);
   const { data: trip } = useTrip(tripId);
@@ -46,6 +51,8 @@ export function MapScreen({ tripId }: { tripId: string }) {
   const [duplicate, setDuplicate] = useState<Place | null>(null);
   const [promptDismissed, setPromptDismissed] = useState(false);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [focus, setFocus] = useState<FocusTarget | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const showNames = zoom >= NAMES_MIN_ZOOM;
 
   // El punto en vivo solo tiene sentido durante los días del viaje: fuera de
@@ -87,6 +94,29 @@ export function MapScreen({ tripId }: { tripId: string }) {
     else setPendingPlace(selected);
   };
 
+  /**
+   * Lleva el mapa hasta un lugar y lo resalta (más grande y por encima de los
+   * demás) un momento, para ubicarlo al añadirlo en vez de ir a ciegas. Si su
+   * categoría estaba filtrada, se vuelve a mostrar: si no, no habría pin.
+   */
+  const focusPlace = (place: Place, aboveSheet = false) => {
+    setDeselected((prev) => {
+      if (!prev.has(place.category_id)) return prev;
+      const next = new Set(prev);
+      next.delete(place.category_id);
+      return next;
+    });
+    setFocus({ lat: place.lat, lng: place.lng, aboveSheet });
+    setHighlightedId(place.id);
+  };
+
+  // El resaltado dura lo justo para encontrarlo con la vista.
+  useEffect(() => {
+    if (!highlightedId) return;
+    const timer = setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [highlightedId]);
+
   const openPlace = (id: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("place", id);
@@ -100,21 +130,27 @@ export function MapScreen({ tripId }: { tripId: string }) {
           className="flex-1 min-h-0 w-full"
           defaultCenter={DEFAULT_CENTER}
           defaultZoom={DEFAULT_ZOOM}
-          onZoomChanged={(e) => setZoom(e.detail.zoom)}
           gestureHandling="greedy"
           disableDefaultUI
           zoomControl
         >
           <MapResizeFix />
+          <ZoomWatcher onChange={setZoom} />
           {showLiveLocation && <LiveLocationMarker />}
           <DestinationCenter destination={trip?.destination} hasPlaces={places.length > 0} />
-          <FitBounds points={filtered.map((p) => ({ lat: p.lat, lng: p.lng }))} />
+          {/* Se reencuadra al entrar y al tocar los filtros, no al añadir lugares. */}
+          <FitBounds
+            points={filtered.map((p) => ({ lat: p.lat, lng: p.lng }))}
+            fitKey={[...deselected].sort().join("|")}
+          />
+          <FocusPlace target={focus} />
           {filtered.map((place) => (
             <CategoryPin
               key={place.id}
               place={place}
               category={categoriesById.get(place.category_id)}
               showName={showNames}
+              selected={place.id === highlightedId}
               onClick={() => openPlace(place.id)}
             />
           ))}
@@ -151,7 +187,12 @@ export function MapScreen({ tripId }: { tripId: string }) {
 
       <Sheet open={!!pendingPlace} onClose={() => setPendingPlace(null)} title="Nuevo lugar">
         {pendingPlace && (
-          <PlaceForm tripId={tripId} fromSearch={pendingPlace} onDone={() => setPendingPlace(null)} />
+          <PlaceForm
+            tripId={tripId}
+            fromSearch={pendingPlace}
+            onCreated={(place) => focusPlace(place)}
+            onDone={() => setPendingPlace(null)}
+          />
         )}
       </Sheet>
 
@@ -169,6 +210,7 @@ export function MapScreen({ tripId }: { tripId: string }) {
               <Button
                 className="flex-1"
                 onClick={() => {
+                  focusPlace(duplicate, true);
                   openPlace(duplicate.id);
                   setDuplicate(null);
                 }}

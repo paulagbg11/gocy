@@ -30,11 +30,13 @@ interface PlaceFormProps {
   editing?: Place;
   fromSearch?: SelectedPlace;
   onDone: () => void;
+  /** Con el lugar ya guardado, justo antes de onDone. */
+  onCreated?: (place: Place) => void;
   /** Tras borrar; si no se pasa, se usa onDone. */
   onDeleted?: () => void;
 }
 
-export function PlaceForm({ tripId, editing, fromSearch, onDone, onDeleted }: PlaceFormProps) {
+export function PlaceForm({ tripId, editing, fromSearch, onDone, onCreated, onDeleted }: PlaceFormProps) {
   const { activeProfile } = useProfile();
   const createPlace = useCreatePlace();
   const updatePlace = useUpdatePlace();
@@ -62,7 +64,7 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone, onDeleted }: Pl
       if (editing) {
         await updatePlace.mutateAsync({ id: editing.id, trip_id: tripId, ...values });
       } else if (fromSearch) {
-        await createPlace.mutateAsync({
+        const created = await createPlace.mutateAsync({
           trip_id: tripId,
           name: values.name,
           category_id: values.category_id,
@@ -73,6 +75,7 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone, onDeleted }: Pl
           google_place_id: fromSearch.placeId ?? null,
           created_by: activeProfile?.id ?? null,
         });
+        onCreated?.(created);
       }
       onDone();
     } catch (err) {

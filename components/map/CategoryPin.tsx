@@ -23,6 +23,7 @@ interface CategoryPinProps {
 export function CategoryPin({ place, category, order, selected, showName, onClick }: CategoryPinProps) {
   const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
   const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
+  const pinScale = selected ? 1.15 : 1;
 
   // El número de orden va dentro de la gota; el nombre, debajo. Un Marker solo
   // admite una etiqueta, así que el orden tiene prioridad.
@@ -38,8 +39,12 @@ export function CategoryPin({ place, category, order, selected, showName, onClic
       title={place.name}
       icon={{
         url: categoryPinDataUrl(emoji, color, selected),
-        // La gota mide 34×44: la etiqueta se centra 10 px por debajo de la punta.
-        labelOrigin: !order && showName ? new google.maps.Point(17, 54) : undefined,
+        // La gota mide 34×44 (un 15 % más si está seleccionada): la etiqueta
+        // se centra 10 px por debajo de la punta.
+        labelOrigin:
+          !order && showName
+            ? new google.maps.Point(17 * pinScale, 44 * pinScale + 10)
+            : undefined,
       }}
       label={label}
       onClick={onClick}
