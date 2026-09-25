@@ -12,10 +12,15 @@ interface FitBoundsProps {
    * sacaba de golpe al usuario de la zona que estaba mirando.
    */
   fitKey?: string;
+  /**
+   * Margen en px alrededor de los puntos. En mapas bajitos, 64 por cada lado
+   * se come casi todo el alto.
+   */
+  padding?: number | google.maps.Padding;
 }
 
 /** Ajusta el zoom/centro para que quepan todos los puntos dados, una vez por conjunto de datos. */
-export function FitBounds({ points, fitKey }: FitBoundsProps) {
+export function FitBounds({ points, fitKey, padding = 64 }: FitBoundsProps) {
   const map = useMap();
   const lastKey = useRef<string | null>(null);
 
@@ -32,8 +37,8 @@ export function FitBounds({ points, fitKey }: FitBoundsProps) {
     }
     const bounds = new google.maps.LatLngBounds();
     points.forEach((p) => bounds.extend(p));
-    map.fitBounds(bounds, 64);
-  }, [map, points, fitKey]);
+    map.fitBounds(bounds, padding);
+  }, [map, points, fitKey, padding]);
 
   return null;
 }

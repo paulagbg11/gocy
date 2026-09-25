@@ -9,11 +9,9 @@ import { usePlaceDayLinks, useAssignPlaceToDay, nextOrderInDay } from "@/lib/que
 import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
 import { useCategoriesById } from "@/lib/queries/categories";
 import { DaySelector } from "./DaySelector";
-import { DayMiniMap } from "./DayMiniMap";
-import { TimelineView } from "./TimelineView";
+import { DayItinerary } from "./DayItinerary";
 import { AddPlaceToDaySheet } from "./AddPlaceToDaySheet";
 import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Button } from "@/components/ui/Button";
 import type { TripDay } from "@/lib/supabase/types";
 
@@ -28,7 +26,6 @@ export function DaysScreen({ tripId }: { tripId: string }) {
   // undefined = todavía no se ha elegido nada explícitamente -> por defecto Día 1;
   // null = el usuario ha elegido explícitamente "Por decidir".
   const [selectedDayId, setSelectedDayId] = useState<string | null | undefined>(undefined);
-  const [mode, setMode] = useState<"map" | "timeline">("map");
   const [addSheetOpen, setAddSheetOpen] = useState(false);
 
   const router = useRouter();
@@ -85,32 +82,21 @@ export function DaysScreen({ tripId }: { tripId: string }) {
       {selectedDay ? (
         <>
           <div className="flex items-center justify-between px-4 pb-2">
-            <SegmentedControl
-              options={[
-                { value: "map", label: "Mapa" },
-                { value: "timeline", label: "Timeline" },
-              ]}
-              value={mode}
-              onChange={setMode}
-            />
+            <p className="text-sm text-muted-foreground">
+              {entriesForDay.length === 1 ? "1 parada" : `${entriesForDay.length} paradas`}
+            </p>
             <Button size="sm" variant="secondary" onClick={() => setAddSheetOpen(true)}>
               <Plus size={16} /> Añadir
             </Button>
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            {mode === "map" ? (
-              <DayMiniMap entries={entriesForDay} tripId={tripId} onOpenPlace={openPlace} />
-            ) : (
-              <div className="flex-1 min-h-0 overflow-y-auto py-3">
-                <TimelineView
-                  entries={entriesForDay}
-                  day={selectedDay}
-                  tripId={tripId}
-                  onOpenPlace={openPlace}
-                />
-              </div>
-            )}
+            <DayItinerary
+              entries={entriesForDay}
+              day={selectedDay}
+              tripId={tripId}
+              onOpenPlace={openPlace}
+            />
           </div>
 
           <AddPlaceToDaySheet

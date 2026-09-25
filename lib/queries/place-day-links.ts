@@ -80,3 +80,39 @@ export function useUpdatePlaceDayLink() {
     onSuccess: (trip_id) => queryClient.invalidateQueries({ queryKey: ["place_day_links", trip_id] }),
   });
 }
+
+export interface DayPlanPatch {
+  id: string;
+  order_in_day?: number;
+  scheduled_at?: string | null;
+}
+
+/**
+ * Guarda de una vez los cambios de orden y hora de un día (mover una parada
+ * renumera las demás). Se pintan al momento en la caché y luego se escriben:
+ * esperando a Supabase, la fila "saltaba" medio segundo después de pulsar.
+ */
+export function useSaveDayPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ patches }: { trip_id: string; patches: DayPlanPatch[] }) => {
+      const supabase = createClient();
+      const results = await Promise.all(
+        patches.map(({ id, ...patch }) => supabase.from("place_day_links").update(patch).eq("id", id)),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onMutate: ({ trip_id, patches }) => {
+      const byId = new Map(patches.map((p) => [p.id, p]));
+      queryClient.setQueryData<PlaceDayLink[]>(["place_day_links", trip_id], (links) =>
+        links?.map((link) => {
+          const patch = byId.get(link.id);
+          return patch ? { ...link, ...patch } : link;
+        }),
+      );
+    },
+    onSettled: (_data, _error, { trip_id }) =>
+      queryClient.invalidateQueries({ queryKey: ["place_day_links", trip_id] }),
+  });
+}
