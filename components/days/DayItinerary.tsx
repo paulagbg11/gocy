@@ -5,8 +5,7 @@ import { Map } from "@vis.gl/react-google-maps";
 import { ChevronDown, ChevronUp, Maximize2, Minimize2, Pencil, X } from "lucide-react";
 import clsx from "clsx";
 import { MapProvider } from "@/components/map/MapProvider";
-import { CategoryPin, NAMES_MIN_ZOOM } from "@/components/map/CategoryPin";
-import { ZoomWatcher } from "@/components/map/ZoomWatcher";
+import { CategoryPin } from "@/components/map/CategoryPin";
 import { RoutePolyline } from "@/components/map/RoutePolyline";
 import { FitBounds } from "@/components/map/FitBounds";
 import { MapResizeFix } from "@/components/map/MapResizeFix";
@@ -40,8 +39,8 @@ const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
  *
  * El mapa va pequeño por defecto (antes se comía media pantalla y la lista no
  * se leía) y se amplía en dos pasos: media pantalla, con la lista debajo, y
- * pantalla completa, tapando también cabecera y pestañas, donde además los
- * pines llevan el nombre al acercarse.
+ * pantalla completa, tapando también cabecera y pestañas. Ampliado, cada pin
+ * lleva debajo su número y su nombre.
  */
 export function DayItinerary({
   entries,
@@ -59,7 +58,6 @@ export function DayItinerary({
   const updatePlace = useUpdatePlace();
   const unassign = useUnassignPlaceFromDay();
   const [mapSize, setMapSize] = useState<MapSize>("compact");
-  const [zoom, setZoom] = useState(0);
   const fullscreen = mapSize === "full";
   const [editing, setEditing] = useState<ItineraryEntry | null>(null);
 
@@ -120,7 +118,6 @@ export function DayItinerary({
             zoomControl={fullscreen}
           >
             <MapResizeFix />
-            <ZoomWatcher onChange={setZoom} />
             {/* Se reencuadra también al cambiar el tamaño del mapa. */}
             <FitBounds
               points={points}
@@ -134,7 +131,10 @@ export function DayItinerary({
                 place={place}
                 category={categoriesById.get(place.category_id)}
                 order={i + 1}
-                showName={fullscreen && zoom >= NAMES_MIN_ZOOM}
+                // En el mapa del día los nombres van siempre que haya sitio
+                // (no solo al acercarse): son pocas paradas y es la forma de
+                // saber qué es cada una. En el mapa pequeño, solo el número.
+                showName={mapSize !== "compact"}
                 onClick={() => onOpenPlace(place.id)}
               />
             ))}

@@ -32,40 +32,36 @@ export function CategoryPin({ place, category, order, selected, showName, onClic
   const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
   const pinScale = selected ? 1.15 : 1;
 
-  // El número de orden va dentro de la gota, en lugar del emoji; el nombre,
-  // debajo. Un Marker solo admite una etiqueta, así que el orden tiene
-  // prioridad. El número va del color de la categoría: en blanco, sobre el
-  // círculo blanco de la gota, no se veía y no había forma de casar los pines
-  // con la lista del día.
-  // Con número y nombre a la vez (el mapa del día en pantalla completa), los
-  // dos van en la pastilla de debajo, "3 · Big Ben", y la gota lleva el emoji.
-  const numberInPin = !!order && !showName;
-  const label: google.maps.MarkerLabel | undefined = numberInPin
-    ? { text: String(order), color, fontSize: "13px", fontWeight: "800" }
+  // La gota lleva siempre el emoji de la categoría. El número de orden y el
+  // nombre van en la pastilla de debajo ("3 · Big Ben", o solo "3"): un Marker
+  // admite una sola etiqueta, y cuando el número iba dentro de la gota se
+  // perdía el icono de la categoría.
+  const labelText = order
+    ? showName
+      ? `${order} · ${shortName(place.name)}`
+      : String(order)
     : showName
-      ? {
-          text: order ? `${order} · ${shortName(place.name)}` : shortName(place.name),
-          className: "pin-name",
-          color: "#1f1e1b",
-          fontSize: "12px",
-          fontWeight: "600",
-        }
-      : undefined;
+      ? shortName(place.name)
+      : null;
+  const label: google.maps.MarkerLabel | undefined = labelText
+    ? {
+        text: labelText,
+        className: "pin-name",
+        color: "#1f1e1b",
+        fontSize: "12px",
+        fontWeight: showName ? "600" : "700",
+      }
+    : undefined;
 
   return (
     <Marker
       position={{ lat: place.lat, lng: place.lng }}
       title={place.name}
       icon={{
-        url: categoryPinDataUrl(numberInPin ? "" : emoji, color, selected),
-        // La gota mide 34×44 (un 15 % más si está seleccionada). El nombre se
-        // centra 10 px por debajo de la punta.
-        // El número, en el centro del círculo blanco (a 17 px de arriba).
-        labelOrigin: numberInPin
-          ? new google.maps.Point(17 * pinScale, 17 * pinScale)
-          : showName
-            ? new google.maps.Point(17 * pinScale, 44 * pinScale + 10)
-            : undefined,
+        url: categoryPinDataUrl(emoji, color, selected),
+        // La gota mide 34×44 (un 15 % más si está seleccionada): la pastilla
+        // se centra 10 px por debajo de la punta.
+        labelOrigin: labelText ? new google.maps.Point(17 * pinScale, 44 * pinScale + 10) : undefined,
       }}
       label={label}
       onClick={onClick}
