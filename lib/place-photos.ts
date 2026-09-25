@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { distanceMeters } from "./geo";
 import type { Place } from "./supabase/types";
 
@@ -114,10 +115,56 @@ async function fetchPlacePhotos(place: Place): Promise<PlacePhotos> {
   return { photos: nearby.slice(0, 4).map((c) => c.photo), nearbyOnly: true };
 }
 
+const placePhotosQuery = (place: Place) => ({
+  // Van ligadas al punto y al nombre: si se edita cualquiera, se vuelven a buscar.
+  queryKey: ["place-photos", place.lat, place.lng, place.name],
+  queryFn: () => fetchPlacePhotos(place),
+});
+
 export function usePlacePhotos(place: Place) {
-  return useQuery({
-    // Van ligadas al punto y al nombre: si se edita cualquiera, se vuelven a buscar.
-    queryKey: ["place-photos", place.lat, place.lng, place.name],
-    queryFn: () => fetchPlacePhotos(place),
-  });
+  return useQuery(placePhotosQuery(place));
+}
+
+/** Espera antes de empezar, para no competir con la carga del mapa. */
+const PREFETCH_DELAY_MS = 1500;
+/** Wikimedia pide no lanzarle ráfagas: de dos en dos es suficiente. */
+const PREFETCH_CONCURRENCY = 2;
+
+/**
+ * Deja buscadas de antemano las fotos de todos los lugares del viaje, y
+ * descargada la primera de cada uno. La consulta a Commons tarda 1,5-2 s por
+ * sí sola y cada foto otro segundo: hacerlo al pulsar el pin se notaba.
+ *
+ * Con "ahorro de datos" activado en el móvil no se adelanta nada.
+ */
+export function usePrefetchPlacePhotos(places: Place[]) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const connection = (navigator as { connection?: { saveData?: boolean } }).connection;
+    if (connection?.saveData || places.length === 0) return;
+
+    let cancelled = false;
+    const queue = [...places];
+
+    const worker = async () => {
+      while (!cancelled && queue.length > 0) {
+        const place = queue.shift()!;
+        const query = placePhotosQuery(place);
+        // prefetchQuery no repite lo que ya está en caché.
+        await queryClient.prefetchQuery(query);
+        const first = queryClient.getQueryData<PlacePhotos>(query.queryKey)?.photos[0];
+        if (first && !cancelled) new Image().src = first.url;
+      }
+    };
+
+    const timer = setTimeout(() => {
+      for (let i = 0; i < PREFETCH_CONCURRENCY; i++) void worker();
+    }, PREFETCH_DELAY_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [places, queryClient]);
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Sheet } from "@/components/ui/Sheet";
 import { PlaceForm } from "./PlaceForm";
 import { PlaceView } from "./PlaceView";
+import { usePrefetchPlacePhotos } from "@/lib/place-photos";
 import type { Place } from "@/lib/supabase/types";
 
 export function PlaceDetailSheet({ tripId, places }: { tripId: string; places: Place[] }) {
@@ -13,6 +14,9 @@ export function PlaceDetailSheet({ tripId, places }: { tripId: string; places: P
   const searchParams = useSearchParams();
   const placeId = searchParams.get("place");
   const place = places.find((p) => p.id === placeId) ?? null;
+
+  // Así, al pulsar un pin, las fotos ya están.
+  usePrefetchPlacePhotos(places);
 
   // Se guarda qué lugar se está editando, no un simple sí/no: así, al abrir
   // otro pin, la ficha vuelve a salir en modo "ver" sin tener que resetear nada.

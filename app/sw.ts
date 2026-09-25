@@ -4,6 +4,7 @@ import {
   CacheFirst,
   ExpirationPlugin,
   NetworkOnly,
+  StaleWhileRevalidate,
   Serwist,
   type PrecacheEntry,
   type RuntimeCaching,
@@ -28,6 +29,12 @@ const isGoogleMaps = (hostname: string) =>
     hostname.endsWith("gstatic.com") ||
     hostname.endsWith("ggpht.com") ||
     hostname === "maps.google.com");
+
+/** Fotos de los lugares (lib/place-photos.ts): la consulta y las miniaturas. */
+const isWikimediaApi = (url: URL) =>
+  url.hostname === "commons.wikimedia.org" && url.pathname === "/w/api.php";
+const isWikimediaImage = (hostname: string) =>
+  hostname === "upload.wikimedia.org" || hostname === "thumb.wikimedia.org";
 
 const isSupabase = (hostname: string) => hostname.endsWith(".supabase.co");
 
@@ -59,6 +66,28 @@ const runtimeCaching: RuntimeCaching[] = [
       cacheName: "supabase-images",
       plugins: [
         new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      ],
+    }),
+  },
+  // Las miniaturas de Commons no cambian para una misma URL: desde caché, sin
+  // esperar a la red. Así las fotos salen al momento al volver a la app.
+  {
+    matcher: ({ url }) => isWikimediaImage(url.hostname),
+    handler: new CacheFirst({
+      cacheName: "place-photos",
+      plugins: [
+        new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: 60 * 24 * 60 * 60 }),
+      ],
+    }),
+  },
+  // La lista de fotos de cada lugar: se enseña la guardada y se refresca por
+  // detrás. Sin esto, cada vez que se abre la app se esperaban 2 s por lugar.
+  {
+    matcher: ({ url }) => isWikimediaApi(url),
+    handler: new StaleWhileRevalidate({
+      cacheName: "place-photos-api",
+      plugins: [
+        new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 }),
       ],
     }),
   },
