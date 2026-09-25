@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { Map } from "@vis.gl/react-google-maps";
-import { ChevronDown, ChevronUp, List, Maximize2, Pencil } from "lucide-react";
+import { ChevronDown, ChevronUp, Maximize2, Minimize2, Pencil, X } from "lucide-react";
 import clsx from "clsx";
 import { MapProvider } from "@/components/map/MapProvider";
-import { CategoryPin } from "@/components/map/CategoryPin";
+import { CategoryPin, NAMES_MIN_ZOOM } from "@/components/map/CategoryPin";
+import { ZoomWatcher } from "@/components/map/ZoomWatcher";
 import { RoutePolyline } from "@/components/map/RoutePolyline";
 import { FitBounds } from "@/components/map/FitBounds";
 import { MapResizeFix } from "@/components/map/MapResizeFix";
@@ -28,16 +29,7 @@ import type { TripDay } from "@/lib/supabase/types";
 
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 
-/**
- * Sin los iconos de Google (tiendas, restaurantes, metro…): en el mapa del día
- * solo importan vuestras paradas y la ruta, y con todo eso encima el
- * recorrido se veía borroso.
- */
-const CLEAN_MAP_STYLES: google.maps.MapTypeStyle[] = [
-  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.business", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-];
+type MapSize = "compact" | "half" | "full";
 
 /** Más arriba que abajo: la gota del pin sobresale ~44 px por encima de su punto. */
 const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
@@ -47,7 +39,9 @@ const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
  * dos con el mismo orden y la misma numeración.
  *
  * El mapa va pequeño por defecto (antes se comía media pantalla y la lista no
- * se leía). Ampliado ocupa todo el día, sin la lista, para ver bien el recorrido.
+ * se leía) y se amplía en dos pasos: media pantalla, con la lista debajo, y
+ * pantalla completa, tapando también cabecera y pestañas, donde además los
+ * pines llevan el nombre al acercarse.
  */
 export function DayItinerary({
   entries,
@@ -64,7 +58,9 @@ export function DayItinerary({
   const savePlan = useSaveDayPlan();
   const updatePlace = useUpdatePlace();
   const unassign = useUnassignPlaceFromDay();
-  const [mapExpanded, setMapExpanded] = useState(false);
+  const [mapSize, setMapSize] = useState<MapSize>("compact");
+  const [zoom, setZoom] = useState(0);
+  const fullscreen = mapSize === "full";
   const [editing, setEditing] = useState<ItineraryEntry | null>(null);
 
   const sequence = useMemo(() => sortItinerary(entries), [entries]);
@@ -105,10 +101,13 @@ export function DayItinerary({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      {/* Es el mismo mapa en los tres tamaños: solo cambia su caja, así no se
+          vuelve a cargar al ampliarlo. */}
       <div
         className={clsx(
-          "relative shrink-0",
-          mapExpanded ? "flex-1 min-h-0" : "h-44",
+          fullscreen ? "fixed inset-0 z-40 bg-surface" : "relative shrink-0",
+          mapSize === "compact" && "h-44",
+          mapSize === "half" && "h-[55%]",
         )}
       >
         <MapProvider>
@@ -118,15 +117,15 @@ export function DayItinerary({
             defaultZoom={12}
             gestureHandling="greedy"
             disableDefaultUI
-            zoomControl={mapExpanded}
-            styles={CLEAN_MAP_STYLES}
+            zoomControl={fullscreen}
           >
             <MapResizeFix />
-            {/* Se reencuadra también al ampliar o reducir el mapa. */}
+            <ZoomWatcher onChange={setZoom} />
+            {/* Se reencuadra también al cambiar el tamaño del mapa. */}
             <FitBounds
               points={points}
-              fitKey={`${mapExpanded}|${points.map((p) => `${p.lat},${p.lng}`).join("|")}`}
-              padding={mapExpanded ? 64 : COMPACT_MAP_PADDING}
+              fitKey={`${mapSize}|${points.map((p) => `${p.lat},${p.lng}`).join("|")}`}
+              padding={mapSize === "compact" ? COMPACT_MAP_PADDING : 64}
             />
             <RoutePolyline path={points} />
             {sequence.map(({ place, link }, i) => (
@@ -135,34 +134,41 @@ export function DayItinerary({
                 place={place}
                 category={categoriesById.get(place.category_id)}
                 order={i + 1}
+                showName={fullscreen && zoom >= NAMES_MIN_ZOOM}
                 onClick={() => onOpenPlace(place.id)}
               />
             ))}
           </Map>
         </MapProvider>
-        {mapExpanded ? (
+        {fullscreen ? (
           <button
-            onClick={() => setMapExpanded(false)}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-surface px-4 py-2.5 text-sm font-medium shadow-[var(--shadow-md)]"
+            onClick={() => setMapSize("half")}
+            aria-label="Salir de pantalla completa"
+            className="absolute right-3 top-[calc(env(safe-area-inset-top)+12px)] rounded-full bg-surface p-2.5 shadow-[var(--shadow-md)] text-foreground"
           >
-            <List size={16} />
-            Ver lista
+            <X size={20} />
           </button>
         ) : (
-          <button
-            onClick={() => setMapExpanded(true)}
-            aria-label="Ampliar mapa"
-            className="absolute bottom-2 right-2 rounded-full bg-surface p-2 shadow-[var(--shadow-md)] text-foreground"
-          >
-            <Maximize2 size={18} />
-          </button>
+          <div className="absolute bottom-2 right-2 flex gap-2">
+            {mapSize === "half" && (
+              <MapButton label="Reducir mapa" onClick={() => setMapSize("compact")}>
+                <Minimize2 size={18} />
+              </MapButton>
+            )}
+            <MapButton
+              label={mapSize === "compact" ? "Ampliar mapa" : "Pantalla completa"}
+              onClick={() => setMapSize(mapSize === "compact" ? "half" : "full")}
+            >
+              <Maximize2 size={18} />
+            </MapButton>
+          </div>
         )}
       </div>
 
       <div
         className={clsx(
           "flex-1 min-h-0 overflow-y-auto flex-col gap-2 px-4 py-3",
-          mapExpanded ? "hidden" : "flex",
+          "flex",
         )}
       >
         {sequence.length === 0 && (
@@ -190,6 +196,26 @@ export function DayItinerary({
         onRemove={removeStop}
       />
     </div>
+  );
+}
+
+function MapButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="rounded-full bg-surface p-2 shadow-[var(--shadow-md)] text-foreground"
+    >
+      {children}
+    </button>
   );
 }
 

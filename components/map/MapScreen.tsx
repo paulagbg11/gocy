@@ -8,7 +8,7 @@ import { findExistingPlace } from "@/lib/places";
 import { useTrip } from "@/lib/queries/trips";
 import { useVisibleCategories } from "@/lib/queries/categories";
 import { MapProvider } from "./MapProvider";
-import { CategoryPin } from "./CategoryPin";
+import { CategoryPin, NAMES_MIN_ZOOM } from "./CategoryPin";
 import { FitBounds } from "./FitBounds";
 import { MapResizeFix } from "./MapResizeFix";
 import { FocusPlace, type FocusTarget } from "./FocusPlace";
@@ -30,11 +30,6 @@ import type { Place } from "@/lib/supabase/types";
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
 const DEFAULT_ZOOM = 12;
 
-/**
- * A partir de este zoom (unos pocos barrios a la vista) los pines llevan el nombre debajo.
- * Más alejado, con todo el viaje a la vista, los nombres se pisarían entre sí.
- */
-const NAMES_MIN_ZOOM = 14;
 
 /** Tiempo que el pin recién añadido (o buscado) se queda resaltado. */
 const HIGHLIGHT_MS = 4000;
