@@ -19,8 +19,16 @@ export async function shareOrDownloadImage(
   } catch {
     return "failed";
   }
+  return shareOrDownloadFile(blob, filename, "image/png");
+}
 
-  const file = new File([blob], filename, { type: "image/png" });
+/** Lo mismo para cualquier fichero ya generado (el PDF del viaje, por ejemplo). */
+export async function shareOrDownloadFile(
+  blob: Blob,
+  filename: string,
+  type: string,
+): Promise<ShareResult> {
+  const file = new File([blob], filename, { type });
 
   if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
     try {

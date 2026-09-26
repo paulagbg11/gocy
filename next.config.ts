@@ -27,6 +27,7 @@ export default process.env.NODE_ENV === "development"
       swDest: "public/sw.js",
       // Los iconos pesan ~850 KB y solo hacen falta al instalar la app en la
       // pantalla de inicio, no para usarla: fuera de la precaché, que se
-      // descarga entera en cada despliegue.
-      globPublicPatterns: ["**/*", "!icons/**"],
+      // descarga entera en cada despliegue. Igual con las fuentes del PDF,
+      // que solo se piden al exportar la guía del viaje.
+      globPublicPatterns: ["**/*", "!icons/**", "!fonts/**"],
     })(nextConfig);

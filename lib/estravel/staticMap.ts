@@ -37,7 +37,12 @@ export interface MapView {
  * `scale` es cuántos píxeles del lienzo ocupa un píxel lógico del mapa: pedimos
  * la imagen a la mitad de tamaño con scale=2, así que vale 2.
  */
-export function computeMapView(points: LatLng[], areaW: number, areaH: number): MapView {
+export function computeMapView(
+  points: LatLng[],
+  areaW: number,
+  areaH: number,
+  maxZoom = 18,
+): MapView {
   const scale = 2;
   const logicalW = areaW / scale;
   const logicalH = areaH / scale;
@@ -54,7 +59,7 @@ export function computeMapView(points: LatLng[], areaW: number, areaH: number): 
   const spanX = Math.max(maxX - minX, 1e-9);
   const spanY = Math.max(maxY - minY, 1e-9);
   const zoom = Math.min(
-    18,
+    maxZoom,
     Math.max(
       1,
       Math.floor(Math.log2(Math.min((logicalW * padding) / spanX, (logicalH * padding) / spanY))),

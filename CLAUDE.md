@@ -55,6 +55,11 @@ con EPERM.
   aparece. Entre parada y parada se pueden describir los **tramos en transporte
   público** (`TransitEditor` / `TransitSteps`): línea, color, dirección, dónde
   subir y bajar, paradas, minutos y andén.
+  El botón **PDF** genera en el móvil una guía del viaje (`@react-pdf/renderer`,
+  cargado solo al pulsar): portada con mapa general, resumen día a día,
+  reservas y lugares sin día, y una página por día con mapa numerado, horario,
+  notas y trayectos. Si un día tiene paradas lejos, saca dos mapas: la zona
+  donde se concentra y el día entero.
 - **Estravel** — recuerdo del viaje al estilo Strava. El recorrido sale de las
   migas de GPS o, si no hay, de los lugares asignados a cada día. Tres vistas y
   una imagen descargable de 1080×1350 dibujada en canvas, con el mapa de fondo
@@ -110,6 +115,12 @@ está visible, y cae a los lugares por días cuando no hay ninguna.
 
 **`place_day_links` borra en cascada desde `places`.** Al borrar un lugar hay que
 mover antes lo que cuelgue de él, o sus días desaparecen en silencio.
+
+**react-pdf tiene dos manías que no avisan.** Con `lineHeight` en la `Page`
+desaparecen los elementos `fixed` (el pie de página), y en un `View` se hereda
+mal y dobla el interlineado: va texto a texto. Y solo cuenta como espacio uno
+simple: con dos seguidos, al partir la línea ahí pinta un guion. Helvetica no
+tiene letras como la "ő", por eso se incrusta Roboto desde `public/fonts`.
 
 **Al capturar pantallas con el panel del navegador oculto, el mapa sale gris.**
 Es un artefacto de repintado, no un fallo. Ya me equivoqué dos veces

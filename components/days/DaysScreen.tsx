@@ -11,6 +11,7 @@ import { useCategoriesById } from "@/lib/queries/categories";
 import { DaySelector } from "./DaySelector";
 import { DayItinerary } from "./DayItinerary";
 import { AddPlaceToDaySheet } from "./AddPlaceToDaySheet";
+import { ExportTripPdf } from "./ExportTripPdf";
 import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
 import { Button } from "@/components/ui/Button";
 import type { TripDay } from "@/lib/supabase/types";
@@ -85,9 +86,12 @@ export function DaysScreen({ tripId }: { tripId: string }) {
             <p className="text-sm text-muted-foreground">
               {entriesForDay.length === 1 ? "1 parada" : `${entriesForDay.length} paradas`}
             </p>
-            <Button size="sm" variant="secondary" onClick={() => setAddSheetOpen(true)}>
-              <Plus size={16} /> Añadir
-            </Button>
+            <div className="flex gap-2">
+              <ExportTripPdf tripId={tripId} />
+              <Button size="sm" variant="secondary" onClick={() => setAddSheetOpen(true)}>
+                <Plus size={16} /> Añadir
+              </Button>
+            </div>
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -110,9 +114,12 @@ export function DaysScreen({ tripId }: { tripId: string }) {
         </>
       ) : (
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          <p className="text-sm text-muted-foreground mb-3">
-            Lugares guardados sin día asignado todavía.
-          </p>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Lugares guardados sin día asignado todavía.
+            </p>
+            <ExportTripPdf tripId={tripId} />
+          </div>
           <div className="flex flex-col gap-1.5">
             {unassignedPlaces.map((place) => {
               const category = categoriesById.get(place.category_id);
