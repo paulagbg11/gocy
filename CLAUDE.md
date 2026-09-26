@@ -40,15 +40,21 @@ con EPERM.
 - `supabase/migrations/` — numeradas. **Paula las ejecuta a mano** en el SQL
   Editor de Supabase; no hay CLI conectada. Al crear una, hay que avisarla y
   decirle que sin ejecutarla la pantalla correspondiente falla. Aplicadas hasta
-  la `0010` incluida.
+  la `0012` incluida — conviene comprobarlo antes de darlo por cierto, porque
+  el repositorio avanza entre sesiones.
 
 ## Qué hay construido
 
 - **Mapa** — buscador de Google Places, pines por categoría, filtros por
   categoría y punto de ubicación en vivo durante los días del viaje. Buscar algo
   que ya está guardado avisa en vez de duplicarlo.
-- **Días** — un día por pestaña, con mapa, lugares en orden y casilla de día
-  completado; el primero sin completar es el que sale por defecto.
+- **Días** — itinerario por día (`DayItinerary`), con mapa plegable, paradas en
+  orden y casilla de día completado; el primero sin completar es el que sale por
+  defecto. Cada parada abre su panel (`StopSheet`) con **su propia nota**, que no
+  es la del lugar: la del hotel ya no se repite en todos los días en que
+  aparece. Entre parada y parada se pueden describir los **tramos en transporte
+  público** (`TransitEditor` / `TransitSteps`): línea, color, dirección, dónde
+  subir y bajar, paradas, minutos y andén.
 - **Estravel** — recuerdo del viaje al estilo Strava. El recorrido sale de las
   migas de GPS o, si no hay, de los lugares asignados a cada día. Tres vistas y
   una imagen descargable de 1080×1350 dibujada en canvas, con el mapa de fondo
@@ -63,7 +69,9 @@ con EPERM.
 
 `trips` → `trip_days`, `places`, `documents` (→ `attachments`), `notes` (→
 `note_items`), `track_points`. `place_day_links` cruza lugares con días y es lo
-que ordena el recorrido. `categories` es **global**, no por viaje, y cada viaje
+que ordena el recorrido; además lleva la nota de esa parada (`notes`) y sus
+tramos de transporte (`transit`, jsonb: es una lista que solo se lee y escribe
+entera, nunca se consulta por dentro). `categories` es **global**, no por viaje, y cada viaje
 oculta las que no usa en `trip_hidden_categories`. `profiles` son las dos
 personas.
 
