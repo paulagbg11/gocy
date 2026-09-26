@@ -38,7 +38,38 @@ con EPERM.
   entre los dos móviles se añade aquí **y** a la publicación de Realtime en su
   migración.
 - `supabase/migrations/` — numeradas. **Paula las ejecuta a mano** en el SQL
-  Editor de Supabase; no hay CLI conectada. Al crear una, hay que avisarla.
+  Editor de Supabase; no hay CLI conectada. Al crear una, hay que avisarla y
+  decirle que sin ejecutarla la pantalla correspondiente falla. Aplicadas hasta
+  la `0010` incluida.
+
+## Qué hay construido
+
+- **Mapa** — buscador de Google Places, pines por categoría, filtros por
+  categoría y punto de ubicación en vivo durante los días del viaje. Buscar algo
+  que ya está guardado avisa en vez de duplicarlo.
+- **Días** — un día por pestaña, con mapa, lugares en orden y casilla de día
+  completado; el primero sin completar es el que sale por defecto.
+- **Estravel** — recuerdo del viaje al estilo Strava. El recorrido sale de las
+  migas de GPS o, si no hay, de los lugares asignados a cada día. Tres vistas y
+  una imagen descargable de 1080×1350 dibujada en canvas, con el mapa de fondo
+  pedido a la Static Maps API y el trazado siguiendo calles vía Routes API.
+- **Docs** — vuelos, trenes/buses, alojamiento, reservas, entradas y notas, con
+  adjuntos. Se abren en vista de lectura que solo enseña lo relleno; editar es
+  otro paso.
+- **Notas** — tablón de post-its con color, enlace y lista de casillas. Se pueden
+  fijar arriba y tachar sin borrarlas.
+
+## Modelo de datos
+
+`trips` → `trip_days`, `places`, `documents` (→ `attachments`), `notes` (→
+`note_items`), `track_points`. `place_day_links` cruza lugares con días y es lo
+que ordena el recorrido. `categories` es **global**, no por viaje, y cada viaje
+oculta las que no usa en `trip_hidden_categories`. `profiles` son las dos
+personas.
+
+Unicidad: índice parcial sobre `places (trip_id, google_place_id)`. Los lugares
+metidos a mano no tienen ese identificador y ahí solo vale la comprobación por
+nombre y cercanía de `lib/places.ts`.
 
 ## Trampas que ya han costado tiempo
 
