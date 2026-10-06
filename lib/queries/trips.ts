@@ -126,6 +126,7 @@ interface UpdateTripInput {
   start_date?: string;
   end_date?: string;
   cover_image_path?: string | null;
+  zone_radius_m?: number | null;
 }
 
 export function useUpdateTrip() {

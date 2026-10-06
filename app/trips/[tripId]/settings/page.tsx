@@ -13,6 +13,8 @@ import { useTrackPoints, useDeleteTrack } from "@/lib/queries/track-points";
 import { useTrackingPreference } from "@/lib/tracking/useTripTracking";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
+import { ZONE_RADIUS_M, ZONE_RADIUS_OPTIONS, formatNearby, formatRadius } from "@/lib/days/nearby";
 
 export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/settings">) {
   const { tripId } = use(params);
@@ -66,6 +68,17 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
       setSaving(false);
     }
   };
+
+  const zoneRadius = trip?.zone_radius_m ?? ZONE_RADIUS_M;
+  // Se guarda al tocar, sin pasar por "Guardar cambios": es un ajuste suelto.
+  const setZoneRadius = (meters: number) =>
+    updateTrip.mutate(
+      { id: tripId, zone_radius_m: meters },
+      {
+        onError: () =>
+          alert("No se ha podido guardar. Falta ejecutar la migración 0016 en Supabase."),
+      },
+    );
 
   const handleDelete = async () => {
     if (!trip) return;
@@ -166,6 +179,28 @@ export default function TripSettingsPage({ params }: PageProps<"/trips/[tripId]/
 
       <h2 className="text-sm font-medium text-muted-foreground mb-3">Categorías</h2>
       <CategoryManager tripId={tripId} />
+
+      <hr className="my-6 border-border" />
+
+      <h2 id="cercania" className="text-sm font-medium text-muted-foreground mb-1">
+        Cercanía entre lugares
+      </h2>
+      <p className="mb-3 text-xs text-muted-foreground">
+        En «Por decidir → Por zona» se juntan los lugares que quedan a menos de esta distancia.
+        Súbela si salen demasiados sueltos; bájala si todo acaba en una sola zona.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {ZONE_RADIUS_OPTIONS.map((meters) => (
+          <Chip
+            key={meters}
+            active={zoneRadius === meters}
+            onClick={() => setZoneRadius(meters)}
+          >
+            {formatRadius(meters)}
+          </Chip>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">Unos {formatNearby(zoneRadius).split(" · ")[1] ?? "más de una hora a pie"}.</p>
 
       <hr className="my-6 border-border" />
 

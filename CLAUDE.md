@@ -58,7 +58,12 @@ con EPERM.
   línea con las líneas y los minutos) y se despliegan uno a uno o todos a la vez.
   La lista es una línea de tiempo; las paradas sin hora se reordenan
   arrastrando su asa. **Por decidir** (`UnassignedPlaces`) agrupa lo que no
-  tiene día por categoría, con lo marcado como imprescindible arriba.
+  tiene día por categoría o **por zona** (cercanía, `lib/days/nearby.ts`): las
+  zonas salen solas con un radio ajustable por viaje en Ajustes, y también se
+  pueden fijar a mano (`places.zone`, solo el nombre). El botón **Añadir** de
+  un día es un planificador con mapa que ordena los candidatos por cercanía a
+  un punto de partida elegido; nunca parte por defecto del hotel ni de una
+  estación.
   El botón **PDF** genera en el móvil una guía del viaje (`@react-pdf/renderer`,
   cargado solo al pulsar): portada con mapa general, resumen día a día,
   reservas y lugares sin día, y una página por día con mapa numerado, horario,

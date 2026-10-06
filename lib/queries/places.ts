@@ -53,6 +53,7 @@ interface UpdatePlaceInput {
   address?: string | null;
   notes?: string | null;
   essential?: boolean;
+  zone?: string | null;
 }
 
 export function useUpdatePlace() {

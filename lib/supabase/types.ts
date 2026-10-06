@@ -14,6 +14,8 @@ export interface Trip {
   start_date: string;
   end_date: string;
   cover_image_path: string | null;
+  /** Radio de las zonas de "Por decidir" (0016). Sin valor, el de la app. */
+  zone_radius_m?: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -55,6 +57,8 @@ export interface Place {
   notes: string | null;
   /** Imprescindible (0013). Sin ejecutar esa migración, la columna no viene. */
   essential?: boolean;
+  /** Zona puesta a mano en "Por decidir" (0016). */
+  zone?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
