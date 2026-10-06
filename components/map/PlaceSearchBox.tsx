@@ -13,7 +13,13 @@ export interface SelectedPlace {
   placeId?: string;
 }
 
-export function PlaceSearchBox({ onSelect }: { onSelect: (place: SelectedPlace) => void }) {
+export function PlaceSearchBox({
+  onSelect,
+  placeholder = "Buscar un lugar…",
+}: {
+  onSelect: (place: SelectedPlace) => void;
+  placeholder?: string;
+}) {
   const map = useMap();
   const placesLib = useMapsLibrary("places");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +73,7 @@ export function PlaceSearchBox({ onSelect }: { onSelect: (place: SelectedPlace) 
   return (
     <div className="relative">
       <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-      <Input ref={inputRef} placeholder="Buscar un lugar…" className="pl-9" />
+      <Input ref={inputRef} placeholder={placeholder} className="pl-9" />
     </div>
   );
 }

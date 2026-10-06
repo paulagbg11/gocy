@@ -21,6 +21,12 @@ interface ProfileContextValue {
    */
   ready: boolean;
   profiles: Profile[];
+  /**
+   * Este móvil ya eligió perfil alguna vez. Se sabe al instante (está en
+   * localStorage), antes de que cargue nada: sirve para no enseñar la
+   * pantalla de elegir perfil a quien ya lo eligió.
+   */
+  hasChosenProfile: boolean;
   activeProfile: Profile | null;
   chooseProfile: (profileId: string) => void;
   clearProfile: () => void;
@@ -82,7 +88,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ProfileContext.Provider
-      value={{ sessionReady, ready, profiles, activeProfile, chooseProfile, clearProfile, renameProfile }}
+      value={{ sessionReady, ready, profiles, hasChosenProfile: activeProfileId !== null, activeProfile, chooseProfile, clearProfile, renameProfile }}
     >
       {children}
     </ProfileContext.Provider>

@@ -297,6 +297,7 @@ export function UnassignedPlaces({
         draft={editingZone}
         places={places}
         unassigned={unassigned}
+        radius={radius}
         onClose={() => setEditingZone(null)}
       />
     </div>

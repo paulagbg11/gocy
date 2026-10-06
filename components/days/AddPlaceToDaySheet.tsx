@@ -146,6 +146,9 @@ function Planner({ tripId, day, places, links }: AddPlaceToDaySheetProps) {
             defaultZoom={12}
             gestureHandling="greedy"
             disableDefaultUI
+            // Con un solo sitio (o dos casi pegados) el encuadre se iba al
+            // zoom máximo y no se veía en qué barrio estaba.
+            maxZoom={16}
           >
             <MapResizeFix />
             <FitBounds
