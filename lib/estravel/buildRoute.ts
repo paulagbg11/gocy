@@ -144,14 +144,14 @@ export function buildRoute({
 
 /** Paleta para la vista "por días". Se repite si el viaje es muy largo. */
 export const DAY_COLORS = [
-  "#2f6f7e",
-  "#bd6248",
-  "#4f7a68",
-  "#b98f3a",
-  "#5b7a91",
-  "#a5715f",
-  "#8a6a4f",
-  "#7a5c86",
+  "#2f93a8",
+  "#e8765a",
+  "#4fae80",
+  "#e3a024",
+  "#5a8fe0",
+  "#de7fa6",
+  "#8f78dc",
+  "#7fb548",
 ];
 
 export const dayColor = (dayIndex: number | null) =>

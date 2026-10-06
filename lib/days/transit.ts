@@ -41,7 +41,20 @@ const DEFAULT_MODE_COLOR: Record<TransitMode, string> = {
   walk: "#A0A5A9",
 };
 
-export const stepColor = (step: TransitStep) => step.color ?? DEFAULT_MODE_COLOR[step.mode];
+/**
+ * "Sin color": lo que se guarda en `color` cuando la línea no tiene ninguno
+ * (un tren sin color de línea, un bus cualquiera). Antes se apañaba con el
+ * gris, que parecía una línea gris de verdad.
+ */
+export const NO_LINE_COLOR = "none";
+
+export const hasLineColor = (step: TransitStep) => step.color !== NO_LINE_COLOR;
+
+/** Gris muy claro para pintar un tramo sin color donde hace falta un color sí o sí (el PDF). */
+const NEUTRAL_LINE_COLOR = "#DDE3E6";
+
+export const stepColor = (step: TransitStep) =>
+  hasLineColor(step) ? (step.color ?? DEFAULT_MODE_COLOR[step.mode]) : NEUTRAL_LINE_COLOR;
 
 /** Los colores claros (amarillo, rosa…) llevan el texto oscuro para que se lea. */
 export function textOn(hex: string) {

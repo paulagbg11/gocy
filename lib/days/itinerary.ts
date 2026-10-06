@@ -40,12 +40,16 @@ export function sortItinerary(entries: ItineraryEntry[]): ItineraryEntry[] {
   return result;
 }
 
-/** Sube (-1) o baja (+1) una parada un puesto. */
-export function moveEntry(sequence: ItineraryEntry[], index: number, direction: -1 | 1) {
-  const target = index + direction;
-  if (target < 0 || target >= sequence.length) return sequence;
+/**
+ * Lleva una parada del puesto `from` al puesto `to`, corriendo las demás. Solo
+ * se mueven las paradas sin hora, así que las que tienen hora siguen en orden
+ * cronológico entre sí.
+ */
+export function moveEntryTo(sequence: ItineraryEntry[], from: number, to: number) {
+  if (from === to || to < 0 || to >= sequence.length) return sequence;
   const next = [...sequence];
-  [next[index], next[target]] = [next[target], next[index]];
+  const [entry] = next.splice(from, 1);
+  next.splice(to, 0, entry);
   return next;
 }
 

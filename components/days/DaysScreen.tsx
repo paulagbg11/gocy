@@ -5,12 +5,11 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { useTripDays, useSetDayCompleted } from "@/lib/queries/trips";
 import { usePlaces } from "@/lib/queries/places";
-import { usePlaceDayLinks, useAssignPlaceToDay, nextOrderInDay } from "@/lib/queries/place-day-links";
-import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
-import { useCategoriesById } from "@/lib/queries/categories";
+import { usePlaceDayLinks } from "@/lib/queries/place-day-links";
 import { DaySelector } from "./DaySelector";
 import { DayItinerary } from "./DayItinerary";
 import { AddPlaceToDaySheet } from "./AddPlaceToDaySheet";
+import { UnassignedPlaces } from "./UnassignedPlaces";
 import { ExportTripPdf } from "./ExportTripPdf";
 import { PlaceDetailSheet } from "@/components/places/PlaceDetailSheet";
 import { Button } from "@/components/ui/Button";
@@ -20,9 +19,7 @@ export function DaysScreen({ tripId }: { tripId: string }) {
   const { data: days = [] } = useTripDays(tripId);
   const { data: places = [] } = usePlaces(tripId);
   const { data: links = [] } = usePlaceDayLinks(tripId);
-  const assign = useAssignPlaceToDay();
   const setDayCompleted = useSetDayCompleted();
-  const categoriesById = useCategoriesById();
 
   // undefined = todavía no se ha elegido nada explícitamente -> por defecto Día 1;
   // null = el usuario ha elegido explícitamente "Por decidir".
@@ -113,68 +110,14 @@ export function DaysScreen({ tripId }: { tripId: string }) {
           />
         </>
       ) : (
-        <div className="flex-1 overflow-y-auto px-4 py-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Lugares guardados sin día asignado todavía.
-            </p>
-            <ExportTripPdf tripId={tripId} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {unassignedPlaces.map((place) => {
-              const category = categoriesById.get(place.category_id);
-              const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
-              const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
-              return (
-                <div
-                  key={place.id}
-                  className="flex items-center gap-3 rounded-[var(--radius-sm)] bg-surface px-3 py-2.5 shadow-[var(--shadow-sm)]"
-                >
-                  <span
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: color }}
-                  >
-                    {emoji}
-                  </span>
-                  <button
-                    onClick={() => openPlace(place.id)}
-                    className="flex-1 truncate text-left text-sm font-medium"
-                  >
-                    {place.name}
-                  </button>
-                  {days.length > 0 && (
-                    <select
-                      defaultValue=""
-                      onChange={(e) => {
-                        const dayId = e.target.value;
-                        if (!dayId) return;
-                        assign.mutate({
-                          trip_id: tripId,
-                          place_id: place.id,
-                          day_id: dayId,
-                          order_in_day: nextOrderInDay(links, dayId),
-                        });
-                      }}
-                      className="shrink-0 rounded-[var(--radius-sm)] border border-border bg-surface text-xs h-8 px-1.5"
-                    >
-                      <option value="" disabled>
-                        Asignar a…
-                      </option>
-                      {days.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          Día {d.day_index}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              );
-            })}
-            {unassignedPlaces.length === 0 && (
-              <p className="text-sm text-muted-foreground">Todo está organizado 🎉</p>
-            )}
-          </div>
-        </div>
+        <UnassignedPlaces
+          tripId={tripId}
+          places={places}
+          unassigned={unassignedPlaces}
+          days={days}
+          links={links}
+          onOpenPlace={openPlace}
+        />
       )}
 
       <PlaceDetailSheet tripId={tripId} places={places} />

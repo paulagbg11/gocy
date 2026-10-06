@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, MapPin, Pencil } from "lucide-react";
+import { ExternalLink, MapPin, Pencil, Star } from "lucide-react";
 import { googleMapsUrl } from "@/lib/google-place";
 import { usePlacePhotos } from "@/lib/place-photos";
 import { useCategoriesById } from "@/lib/queries/categories";
@@ -61,8 +61,16 @@ export function PlaceView({ place, onEdit }: { place: Place; onEdit: () => void 
       )}
 
       <div className="flex flex-col gap-1.5">
-        <p className="text-sm font-medium">
-          {category?.emoji ?? FALLBACK_CATEGORY_EMOJI} {category?.name ?? "Sin categoría"}
+        <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+          <span>
+            {category?.emoji ?? FALLBACK_CATEGORY_EMOJI} {category?.name ?? "Sin categoría"}
+          </span>
+          {place.essential && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+              <Star size={12} className="fill-amber-400 text-amber-400" />
+              Imprescindible
+            </span>
+          )}
         </p>
         {place.address && (
           <p className="flex items-start gap-1.5 text-sm text-muted-foreground">

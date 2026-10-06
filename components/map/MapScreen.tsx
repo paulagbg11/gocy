@@ -7,6 +7,7 @@ import { usePlaces } from "@/lib/queries/places";
 import { findExistingPlace } from "@/lib/places";
 import { useTrip } from "@/lib/queries/trips";
 import { useVisibleCategories } from "@/lib/queries/categories";
+import { categoryTones } from "@/lib/categories";
 import { MapProvider } from "./MapProvider";
 import { CategoryPin, NAMES_MIN_ZOOM } from "./CategoryPin";
 import { FitBounds } from "./FitBounds";
@@ -160,7 +161,7 @@ export function MapScreen({ tripId }: { tripId: string }) {
               <Chip
                 key={cat.id}
                 active={!deselected.has(cat.id)}
-                color={cat.color}
+                color={categoryTones(cat.color).edge}
                 onClick={() => toggleCategory(cat.id)}
               >
                 {cat.emoji} {cat.name}

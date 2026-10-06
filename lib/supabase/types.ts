@@ -53,6 +53,8 @@ export interface Place {
   address: string | null;
   google_place_id: string | null;
   notes: string | null;
+  /** Imprescindible (0013). Sin ejecutar esa migración, la columna no viene. */
+  essential?: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;

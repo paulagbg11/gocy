@@ -54,7 +54,11 @@ con EPERM.
   es la del lugar: la del hotel ya no se repite en todos los días en que
   aparece. Entre parada y parada se pueden describir los **tramos en transporte
   público** (`TransitEditor` / `TransitSteps`): línea, color, dirección, dónde
-  subir y bajar, paradas, minutos y andén.
+  subir y bajar, paradas, minutos y andén. En la lista salen plegados (una
+  línea con las líneas y los minutos) y se despliegan uno a uno o todos a la vez.
+  La lista es una línea de tiempo; las paradas sin hora se reordenan
+  arrastrando su asa. **Por decidir** (`UnassignedPlaces`) agrupa lo que no
+  tiene día por categoría, con lo marcado como imprescindible arriba.
   El botón **PDF** genera en el móvil una guía del viaje (`@react-pdf/renderer`,
   cargado solo al pulsar): portada con mapa general, resumen día a día,
   reservas y lugares sin día, y una página por día con mapa numerado, horario,
@@ -65,7 +69,9 @@ con EPERM.
   una imagen descargable de 1080×1350 dibujada en canvas, con el mapa de fondo
   pedido a la Static Maps API y el trazado siguiendo calles vía Routes API.
 - **Docs** — vuelos, trenes/buses, alojamiento, reservas, entradas y notas, con
-  adjuntos. Se abren en vista de lectura que solo enseña lo relleno; editar es
+  adjuntos. Al crear uno se puede subir el PDF de la reserva: se lee en el
+  móvil con `pdfjs-dist` y `lib/docs/readReservation.ts` rellena lo que
+  entiende con reglas (sin IA, decisión de Paula); nunca inventa una hora. Se abren en vista de lectura que solo enseña lo relleno; editar es
   otro paso.
 - **Notas** — tablón de post-its con color, enlace y lista de casillas. Se pueden
   fijar arriba y tachar sin borrarlas.
@@ -79,6 +85,11 @@ tramos de transporte (`transit`, jsonb: es una lista que solo se lee y escribe
 entera, nunca se consulta por dentro). `categories` es **global**, no por viaje, y cada viaje
 oculta las que no usa en `trip_hidden_categories`. `profiles` son las dos
 personas.
+
+Los colores de categoría se guardan apagados y **no se pintan tal cual**:
+`categoryTones` (`lib/categories.ts`) saca de cada uno el pastel, el borde y la
+tinta que usan pines, listas y Estravel. `places.essential` es la etiqueta
+opcional de imprescindible.
 
 Unicidad: índice parcial sobre `places (trip_id, google_place_id)`. Los lugares
 metidos a mano no tienen ese identificador y ahí solo vale la comprobación por

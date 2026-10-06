@@ -44,3 +44,17 @@ export function findExistingPlace(
     ) ?? null
   );
 }
+
+/** Orden alfabético por nombre, sin distinguir mayúsculas ni tildes. */
+export const byName = (a: { name: string }, b: { name: string }) =>
+  a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+
+/**
+ * Lo que devuelve Supabase al tocar `essential` sin haber ejecutado la
+ * migración 0013: la columna no existe.
+ */
+export const isMissingEssentialColumn = (err: unknown) =>
+  typeof err === "object" && err !== null && /essential/i.test(String((err as { message?: unknown }).message));
+
+export const ESSENTIAL_MIGRATION_HINT =
+  "Para marcar imprescindibles falta ejecutar la migración 0013 en Supabase.";

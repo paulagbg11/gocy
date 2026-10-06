@@ -236,8 +236,8 @@ function EstravelContent({ tripId }: { tripId: string }) {
               );
             })}
 
-            {start && <Marker position={start} icon={{ url: endpointIcon("#4f7a68") }} title="Inicio" />}
-            {end && <Marker position={end} icon={{ url: endpointIcon("#bd6248") }} title="Final" />}
+            {start && <Marker position={start} icon={{ url: endpointIcon("#4fae80") }} title="Inicio" />}
+            {end && <Marker position={end} icon={{ url: endpointIcon("#e8765a") }} title="Final" />}
 
             {mode !== "clean" &&
               visitedPlaces.map((place) => (

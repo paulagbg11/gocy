@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import { stepColor, textOn, transitModeInfo } from "@/lib/days/transit";
+import clsx from "clsx";
+import { hasLineColor, stepColor, textOn, transitModeInfo } from "@/lib/days/transit";
 import type { TransitStep } from "@/lib/supabase/types";
 
 /**
@@ -22,9 +23,43 @@ export function TransitSteps({ steps }: { steps: TransitStep[] }) {
   );
 }
 
-function TransitStepCard({ step }: { step: TransitStep }) {
+/**
+ * El trayecto plegado, en una línea: las líneas que hay que coger, en orden, y
+ * lo que se tarda en total.
+ */
+export function TransitSummary({ steps }: { steps: TransitStep[] }) {
+  const minutes = steps.reduce((sum, step) => sum + (step.minutes ?? 0), 0);
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-1">
+      {steps.map((step, i) => (
+        <LineBadge key={i} step={step} small />
+      ))}
+      {minutes > 0 && <span className="ml-0.5 text-xs text-muted-foreground">{minutes} min</span>}
+    </span>
+  );
+}
+
+/** La pastilla de la línea. Sin color, va en el gris neutro de la app. */
+function LineBadge({ step, small }: { step: TransitStep; small?: boolean }) {
   const mode = transitModeInfo(step.mode);
+  const colored = hasLineColor(step);
   const color = stepColor(step);
+  return (
+    <span
+      className={clsx(
+        "inline-flex max-w-full items-center gap-1 rounded-md",
+        small ? "px-1.5 py-px text-xs font-semibold" : "px-2 py-0.5 text-sm font-bold",
+        !colored && "bg-surface-2 text-foreground",
+      )}
+      style={colored ? { background: color, color: textOn(color) } : undefined}
+    >
+      <span aria-hidden>{mode.emoji}</span>
+      <span className="truncate">{step.line || mode.label}</span>
+    </span>
+  );
+}
+
+function TransitStepCard({ step }: { step: TransitStep }) {
   // Andando no se "sube" ni se "baja" de nada.
   const walk = step.mode === "walk";
   const details = [
@@ -34,17 +69,11 @@ function TransitStepCard({ step }: { step: TransitStep }) {
 
   return (
     <div
-      className="rounded-[var(--radius-sm)] bg-surface-2 py-2.5 pl-3 pr-3 border-l-[5px]"
-      style={{ borderLeftColor: color }}
+      className="rounded-[var(--radius-sm)] border-l-[3px] border-l-surface-2 bg-surface px-3 py-2.5"
+      style={hasLineColor(step) ? { borderLeftColor: stepColor(step) } : undefined}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span
-          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-sm font-bold"
-          style={{ background: color, color: textOn(color) }}
-        >
-          <span aria-hidden>{mode.emoji}</span>
-          {step.line || mode.label}
-        </span>
+        <LineBadge step={step} />
         {step.direction && (
           <span className="flex min-w-0 items-center gap-1 text-base font-semibold leading-tight">
             <ArrowRight size={16} className="shrink-0" />

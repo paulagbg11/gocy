@@ -2,6 +2,7 @@ import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categori
 import { sortItinerary, toLocalTimeValue, type ItineraryEntry } from "@/lib/days/itinerary";
 import { dayColor } from "@/lib/estravel/buildRoute";
 import { distanceMeters } from "@/lib/geo";
+import { byName } from "@/lib/places";
 import type {
   Category,
   Place,
@@ -206,7 +207,8 @@ export function buildTripSummary({
   const unassigned = [...groups.entries()]
     .map(([categoryId, list]) => ({
       category: categoriesById.get(categoryId) ?? null,
-      places: list,
+      // Lo imprescindible primero y, dentro de cada grupo, por orden alfabético.
+      places: list.sort((a, b) => Number(!!b.essential) - Number(!!a.essential) || byName(a, b)),
     }))
     .sort((a, b) => (a.category?.sort_order ?? 999) - (b.category?.sort_order ?? 999));
 

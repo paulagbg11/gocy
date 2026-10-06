@@ -491,15 +491,62 @@ function CoverPage({ summary, maps }: { summary: TripSummary; maps: PdfMaps }) {
             Guardados sin día
           </Text>
           <Text style={s.sectionHint}>
-            Lugares que tenéis guardados pero que aún no habéis metido en ningún día.
+            Lugares guardados que aún no están en ningún día, con casilla para ir repartiéndolos. Los marcados con estrella son imprescindibles.
           </Text>
           {unassigned.map(({ category, places }) => (
-            <View key={category?.id ?? "sin"} wrap={false} style={{ marginBottom: 6 }}>
-              <Text style={s.bold}>
-                {category?.emoji ?? "📍"} {category?.name ?? "Sin categoría"}{" "}
-                <Text style={[s.muted, { fontWeight: 400 }]}>({places.length})</Text>
-              </Text>
-              <Text style={[s.para, { fontSize: 9 }]}>{places.map((p) => p.name).join(" · ")}</Text>
+            <View key={category?.id ?? "sin"} style={{ marginBottom: 10 }}>
+              <View
+                wrap={false}
+                minPresenceAhead={30}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: C.soft,
+                  borderLeftWidth: 4,
+                  borderLeftColor: category?.color ?? C.muted,
+                  borderRadius: 4,
+                  paddingVertical: 4,
+                  paddingHorizontal: 8,
+                  marginBottom: 4,
+                }}
+              >
+                <Text style={[s.bold, { flex: 1 }]}>
+                  {category?.emoji ?? "📍"} {category?.name ?? "Sin categoría"}
+                </Text>
+                <Text style={[s.small, s.muted]}>{places.length}</Text>
+              </View>
+              {/* A dos columnas y con casilla: para ir tachando a boli al repartirlos. */}
+              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                {places.map((place) => (
+                  <View
+                    key={place.id}
+                    wrap={false}
+                    style={{
+                      width: "50%",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingVertical: 2.5,
+                      paddingLeft: 8,
+                      paddingRight: 8,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 9,
+                        height: 9,
+                        borderWidth: 1,
+                        borderColor: place.essential ? "#d99a00" : C.line,
+                        borderRadius: 2,
+                        marginRight: 6,
+                      }}
+                    />
+                    <Text style={[{ flex: 1, fontSize: 9.5, lineHeight: 1.3 }, place.essential ? s.bold : {}]}>
+                      {place.essential ? "⭐ " : ""}
+                      {place.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
           ))}
         </>

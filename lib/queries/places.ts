@@ -28,6 +28,7 @@ interface CreatePlaceInput {
   address?: string | null;
   google_place_id?: string | null;
   notes?: string | null;
+  essential?: boolean;
   created_by: string | null;
 }
 
@@ -51,6 +52,7 @@ interface UpdatePlaceInput {
   category_id?: string;
   address?: string | null;
   notes?: string | null;
+  essential?: boolean;
 }
 
 export function useUpdatePlace() {

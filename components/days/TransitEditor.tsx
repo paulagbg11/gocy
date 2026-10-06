@@ -1,10 +1,17 @@
 "use client";
 
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Plus, Slash, Trash2 } from "lucide-react";
 import clsx from "clsx";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { LINE_COLORS, TRANSIT_MODES, stepColor, textOn } from "@/lib/days/transit";
+import {
+  LINE_COLORS,
+  NO_LINE_COLOR,
+  TRANSIT_MODES,
+  hasLineColor,
+  stepColor,
+  textOn,
+} from "@/lib/days/transit";
 import type { TransitStep } from "@/lib/supabase/types";
 
 /**
@@ -74,8 +81,21 @@ export function TransitEditor({
                 />
               </Field>
               <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Color de la línea">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!hasLineColor(step)}
+                  aria-label="Sin color"
+                  onClick={() => update(i, { color: NO_LINE_COLOR })}
+                  className={clsx(
+                    "flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-muted-foreground text-muted-foreground",
+                    !hasLineColor(step) && "ring-2 ring-offset-2 ring-foreground",
+                  )}
+                >
+                  {hasLineColor(step) ? <Slash size={14} /> : <Check size={14} />}
+                </button>
                 {LINE_COLORS.map((color) => {
-                  const selected = stepColor(step) === color;
+                  const selected = hasLineColor(step) && stepColor(step) === color;
                   return (
                     <button
                       key={color}

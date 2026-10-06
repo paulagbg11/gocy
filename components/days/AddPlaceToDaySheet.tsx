@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
+import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI, categoryTones } from "@/lib/categories";
 import { useCategoriesById } from "@/lib/queries/categories";
 import { useAssignPlaceToDay, nextOrderInDay } from "@/lib/queries/place-day-links";
+import { byName } from "@/lib/places";
 import { Sheet } from "@/components/ui/Sheet";
 import type { Place, PlaceDayLink, TripDay } from "@/lib/supabase/types";
 
@@ -27,6 +28,10 @@ export function AddPlaceToDaySheet({ open, onClose, tripId, day, places, links }
     }
     return map;
   }, [links]);
+
+  // Por orden alfabético: con muchos lugares guardados, es la forma de
+  // encontrar uno sin leerlos todos.
+  const sortedPlaces = useMemo(() => [...places].sort(byName), [places]);
 
   const handlePick = async (place: Place) => {
     const existingLinks = linksByPlace.get(place.id) ?? [];
@@ -58,7 +63,7 @@ export function AddPlaceToDaySheet({ open, onClose, tripId, day, places, links }
         </p>
       ) : (
         <div className="flex flex-col gap-1.5 max-h-[55vh] overflow-y-auto">
-          {places.map((place) => {
+          {sortedPlaces.map((place) => {
             const category = categoriesById.get(place.category_id);
             const color = category?.color ?? FALLBACK_CATEGORY_COLOR;
             const emoji = category?.emoji ?? FALLBACK_CATEGORY_EMOJI;
@@ -71,7 +76,7 @@ export function AddPlaceToDaySheet({ open, onClose, tripId, day, places, links }
               >
                 <span
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: color }}
+                  style={{ background: categoryTones(color).fill }}
                 >
                   {emoji}
                 </span>
