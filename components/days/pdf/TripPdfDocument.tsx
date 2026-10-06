@@ -17,6 +17,7 @@ import { googleMapsUrl } from "@/lib/google-place";
 import { formatDistance } from "@/lib/geo";
 import { stepColor, textOn, transitModeInfo } from "@/lib/days/transit";
 import {
+  sameChoice,
   walkingMinutes,
   type DayEvent,
   type SummaryDay,
@@ -368,7 +369,9 @@ function DayOverviewRow({ day }: { day: SummaryDay }) {
           <Text style={[s.para, { fontSize: 9 }]}>
             {day.stops.map((st, i) => (
               <Text key={st.link.id}>
-                {i > 0 && <Text style={s.muted}> › </Text>}
+                {i > 0 && (
+                  <Text style={s.muted}>{sameChoice(day.stops[i - 1], st) ? " o " : " › "}</Text>
+                )}
                 {st.time && <Text style={s.bold}>{st.time} </Text>}
                 {st.place.name}
               </Text>
@@ -683,11 +686,23 @@ function StopBlock({ stop }: { stop: SummaryStop }) {
           marginRight: 10,
         }}
       >
-        <Text style={{ color: textOn(stop.color), fontWeight: 700, fontSize: 10, lineHeight: 1 }}>
-          {stop.order}
+        <Text
+          style={{
+            color: textOn(stop.color),
+            fontWeight: 700,
+            fontSize: stop.choice ? 8.5 : 10,
+            lineHeight: 1,
+          }}
+        >
+          {stop.label}
         </Text>
       </View>
       <View style={{ flex: 1, paddingTop: 2 }}>
+        {stop.choice?.index === 0 && (
+          <Text style={[s.small, { color: C.accent, fontWeight: 700 }]}>
+            A elegir · una de {stop.choice.size}
+          </Text>
+        )}
         <Text style={{ fontSize: 12, fontWeight: 700 }}>
           {stop.emoji} {stop.place.name}
         </Text>
@@ -848,7 +863,17 @@ function DayPage({
         return (
           <View key={stop.link.id}>
             <StopBlock stop={stop} />
-            {next && <Leg stop={stop} next={next} />}
+            {next &&
+              (sameChoice(stop, next) ? (
+                // Entre opciones no hay trayecto: se va a una o a otra.
+                <Text
+                  style={[s.small, s.muted, { marginLeft: TIME_W + DOT + 10, paddingVertical: 5 }]}
+                >
+                  o bien
+                </Text>
+              ) : (
+                <Leg stop={stop} next={next} />
+              ))}
           </View>
         );
       })}

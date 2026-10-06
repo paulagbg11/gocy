@@ -188,33 +188,29 @@ async function buildMapSet(
 export async function buildPdfMaps(summary: TripSummary): Promise<PdfMaps> {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  const overviewPromise = buildMapSet(
-    summary.days.map((d) => ({
+  // Las opciones a elegir van en su propia capa, sin línea: el recorrido no
+  // pasa de una a otra.
+  const layersOf = (d: TripSummary["days"][number], labelled: boolean): MapLayer[] =>
+    [false, true].map((choices) => ({
       color: d.color,
-      line: true,
-      points: d.stops.map((s) => ({ lat: s.place.lat, lng: s.place.lng })),
-    })),
+      line: !choices,
+      points: d.stops
+        .filter((s) => !!s.choice === choices)
+        .map((s) => ({
+          lat: s.place.lat,
+          lng: s.place.lng,
+          ...(labelled ? { label: s.label, color: s.color } : {}),
+        })),
+    }));
+
+  const overviewPromise = buildMapSet(
+    summary.days.flatMap((d) => layersOf(d, false)),
     6000,
     apiKey,
   );
 
   const dayPromises = summary.days.map(async (d) => {
-    const set = await buildMapSet(
-      [
-        {
-          color: d.color,
-          line: true,
-          points: d.stops.map((s) => ({
-            lat: s.place.lat,
-            lng: s.place.lng,
-            label: String(s.order),
-            color: s.color,
-          })),
-        },
-      ],
-      3500,
-      apiKey,
-    );
+    const set = await buildMapSet(layersOf(d, true), 3500, apiKey);
     return [d.day.id, set] as const;
   });
 

@@ -87,6 +87,7 @@ export interface DayPlanPatch {
   scheduled_at?: string | null;
   transit?: TransitStep[] | null;
   notes?: string | null;
+  choice_group?: string | null;
 }
 
 /**

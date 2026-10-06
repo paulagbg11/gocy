@@ -30,14 +30,18 @@ import {
 } from "@/lib/queries/place-day-links";
 import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI, categoryTones } from "@/lib/categories";
 import {
+  gatherChoices,
   moveEntryTo,
   orderPatches,
+  pinsOf,
   placeByTime,
   sortItinerary,
+  stopMarks,
   timeOf,
   timeValueToIso,
   toLocalTimeValue,
   type ItineraryEntry,
+  type StopMark,
 } from "@/lib/days/itinerary";
 import { StopSheet } from "./StopSheet";
 import { TransitSteps, TransitSummary } from "./TransitSteps";
@@ -83,6 +87,10 @@ const COMPACT_MAP_PADDING = { top: 48, bottom: 12, left: 24, right: 24 };
  * pantalla completa, tapando también cabecera y pestañas. Ampliado, cada pin
  * lleva debajo su número y su nombre. También se puede cerrar del todo y
  * quedarse solo con la planificación.
+ *
+ * Las paradas "a elegir" (varios sitios para cenar) comparten número y salen
+ * juntas en un bloque; la ruta del mapa no pasa por ellas, porque no se va de
+ * una a otra.
  */
 export function DayItinerary({
   entries,
@@ -116,6 +124,8 @@ export function DayItinerary({
   const [openTransit, setOpenTransit] = useState<ReadonlySet<string>>(new Set());
 
   const sequence = useMemo(() => sortItinerary(entries), [entries]);
+  const marks = useMemo(() => stopMarks(sequence), [sequence]);
+  const pins = useMemo(() => pinsOf(sequence, marks), [sequence, marks]);
 
   const withTransit = sequence.filter((e) => (e.link.transit?.length ?? 0) > 0);
   const allTransitOpen = withTransit.every((e) => openTransit.has(e.link.id));
@@ -128,10 +138,13 @@ export function DayItinerary({
   const toggleAllTransit = () =>
     setOpenTransit(allTransitOpen ? new Set() : new Set(withTransit.map((e) => e.link.id)));
 
-  /** Las otras veces que este lugar sale en el viaje (otros días). */
+  /** Las otras veces que este lugar sale en el viaje (otros días, o este mismo). */
   const otherVisitsOf = (entry: ItineraryEntry) =>
     allLinks.filter((l) => l.place_id === entry.place.id && l.id !== entry.link.id);
-  const points = sequence.map(({ place }) => ({ lat: place.lat, lng: place.lng }));
+  const points = pins.map(({ place }) => ({ lat: place.lat, lng: place.lng }));
+  const routePoints = sequence
+    .filter((_, i) => !marks[i].choice)
+    .map(({ place }) => ({ lat: place.lat, lng: place.lng }));
 
   const saveSequence = (
     next: ItineraryEntry[],
@@ -208,6 +221,7 @@ export function DayItinerary({
     notes: string,
     transit: TransitStep[] | null,
     copyNotesToAllVisits: boolean,
+    choiceWith: string[],
   ) => {
     const extra: DayPlanPatch[] = [];
     let next = sequence;
@@ -235,12 +249,38 @@ export function DayItinerary({
       }
     }
 
+    // Opciones a elegir. Solo se toca si ha cambiado con quién se agrupa.
+    const index = sequence.findIndex((e) => e.link.id === entry.link.id);
+    const group = marks[index]?.choice?.group ?? null;
+    const before = sequence
+      .filter((e) => group && e.link.choice_group === group && e.link.id !== entry.link.id)
+      .map((e) => e.link.id);
+    if ([...before].sort().join() !== [...choiceWith].sort().join()) {
+      const members = new Set(choiceWith.length > 0 ? [entry.link.id, ...choiceWith] : []);
+      const newGroup = entry.link.choice_group ?? crypto.randomUUID();
+      const choiceOf = (e: ItineraryEntry) => {
+        if (members.has(e.link.id)) return newGroup;
+        // Sale del grupo: esta parada, o las que se han desmarcado.
+        if (e.link.id === entry.link.id || before.includes(e.link.id)) return null;
+        return e.link.choice_group ?? null;
+      };
+      next = gatherChoices(
+        next.map((e) => {
+          const choice = choiceOf(e);
+          if (choice === (e.link.choice_group ?? null)) return e;
+          extra.push({ id: e.link.id, choice_group: choice });
+          return { ...e, link: { ...e.link, choice_group: choice } };
+        }),
+      );
+    }
+
     saveSequence(next, extra, {
-      // Sin las columnas de 0011 (trayectos) o 0012 (notas por día), Supabase
-      // rechaza el cambio y se desharía sin decir nada.
+      // Sin las columnas de 0011 (trayectos), 0012 (notas por día) o 0017
+      // (opciones a elegir), Supabase rechaza el cambio y se desharía sin
+      // decir nada.
       onError: () =>
         alert(
-          "No se ha podido guardar. Si es la primera vez que usas trayectos o notas por día, falta ejecutar las migraciones 0011 y 0012 en Supabase.",
+          "No se ha podido guardar. Si es la primera vez que usas trayectos, notas por día u opciones a elegir, falta ejecutar las migraciones 0011, 0012 y 0017 en Supabase.",
         ),
     });
     setEditing(null);
@@ -287,13 +327,13 @@ export function DayItinerary({
                 fitKey={`${mapSize}|${points.map((p) => `${p.lat},${p.lng}`).join("|")}`}
                 padding={mapSize === "compact" ? COMPACT_MAP_PADDING : 64}
               />
-              <RoutePolyline path={points} />
-              {sequence.map(({ place, link }, i) => (
+              <RoutePolyline path={routePoints} />
+              {pins.map(({ place, label }) => (
                 <CategoryPin
-                  key={link.id}
+                  key={place.id}
                   place={place}
                   category={categoriesById.get(place.category_id)}
-                  order={i + 1}
+                  order={label}
                   // En el mapa del día los nombres van siempre que haya sitio
                   // (no solo al acercarse): son pocas paradas y es la forma de
                   // saber qué es cada una. En el mapa pequeño, solo el número.
@@ -354,7 +394,7 @@ export function DayItinerary({
             <StopRow
               key={entry.link.id}
               entry={entry}
-              order={i + 1}
+              mark={marks[i]}
               last={i === sequence.length - 1}
               color={categoriesById.get(entry.place.category_id)?.color ?? FALLBACK_CATEGORY_COLOR}
               emoji={categoriesById.get(entry.place.category_id)?.emoji ?? FALLBACK_CATEGORY_EMOJI}
@@ -384,6 +424,7 @@ export function DayItinerary({
           !!editing && isTransportCategory(categoriesById.get(editing.place.category_id))
         }
         otherVisits={editing ? otherVisitsOf(editing).length : 0}
+        dayStops={sequence.map((entry, i) => ({ entry, mark: marks[i] }))}
         onClose={() => setEditing(null)}
         onSave={saveStop}
         onRemove={removeStop}
@@ -428,7 +469,7 @@ function MapButton({
  */
 function StopRow({
   entry,
-  order,
+  mark,
   last,
   color,
   emoji,
@@ -446,7 +487,7 @@ function StopRow({
   onNudge,
 }: {
   entry: ItineraryEntry;
-  order: number;
+  mark: StopMark;
   last: boolean;
   color: string;
   emoji: string;
@@ -471,12 +512,20 @@ function StopRow({
   const notes = stopNotes(entry)?.trim();
   const transit = entry.link.transit;
   const tones = categoryTones(color);
+  // Una opción a elegir: va en un bloque con las demás del grupo.
+  const choice = mark.choice;
+  const firstChoice = choice?.index === 0;
+  const lastChoice = !!choice && choice.index === choice.size - 1;
 
   return (
     <li
       ref={rowRef}
       className={clsx(
         "relative flex gap-2.5",
+        choice && "-mx-2 bg-accent/[0.07] px-2",
+        firstChoice && "rounded-t-[var(--radius-sm)] pt-2",
+        lastChoice && "rounded-b-[var(--radius-sm)]",
+        lastChoice && !last && "mb-4",
         settling && "transition-transform duration-150 ease-out",
         dragging && "z-10 rounded-[var(--radius-sm)] bg-surface shadow-[var(--shadow-md)]",
       )}
@@ -516,16 +565,25 @@ function StopRow({
 
       <div className="flex shrink-0 flex-col items-center">
         <span
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold"
+          className={clsx(
+            "flex h-6 items-center justify-center rounded-full text-[11px] font-semibold",
+            choice ? "min-w-7 px-1" : "w-6",
+          )}
           // Los mismos tonos que el pin de esta parada en el mapa.
           style={{ background: tones.fill, color: tones.ink }}
         >
-          {order}
+          {mark.label}
         </span>
-        {!last && <span className="mt-1 w-px flex-1 bg-border" />}
+        {/* Entre opciones no hay línea: no se va de una a otra. */}
+        {!last && !choice && <span className="mt-1 w-px flex-1 bg-border" />}
       </div>
 
-      <div className={clsx("min-w-0 flex-1", !last && "pb-5")}>
+      <div className={clsx("min-w-0 flex-1", choice ? "pb-3" : !last && "pb-5")}>
+        {choice && (
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+            {firstChoice ? `A elegir · una de ${choice.size}` : "o bien"}
+          </p>
+        )}
         <div className="flex items-start gap-1">
           <button onClick={onOpen} className="min-w-0 flex-1 text-left">
             <span className="flex min-h-6 items-center gap-1.5">

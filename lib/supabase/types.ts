@@ -100,6 +100,11 @@ export interface PlaceDayLink {
    * se ha ejecutado: entonces se enseña la nota del lugar, como antes.
    */
   notes?: string | null;
+  /**
+   * Paradas "a elegir" (0017): las del mismo día con el mismo identificador
+   * son alternativas entre sí, no van una detrás de otra.
+   */
+  choice_group?: string | null;
   created_at: string;
 }
 

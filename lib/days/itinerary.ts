@@ -37,7 +37,85 @@ export function sortItinerary(entries: ItineraryEntry[]): ItineraryEntry[] {
   const timedInOrder = timedSlots.map((i) => byOrder[i]).sort((a, b) => timeOf(a)! - timeOf(b)!);
   const result = [...byOrder];
   timedSlots.forEach((slot, k) => (result[slot] = timedInOrder[k]));
-  return result;
+  return gatherChoices(result);
+}
+
+/**
+ * Los grupos "a elegir" que hay de verdad en el día: identificadores que
+ * comparten dos paradas o más. Uno suelto (se quitaron las demás opciones) no
+ * cuenta: es una parada normal.
+ */
+function choiceSizes(sequence: ItineraryEntry[]) {
+  const sizes = new Map<string, number>();
+  for (const { link } of sequence) {
+    if (link.choice_group) sizes.set(link.choice_group, (sizes.get(link.choice_group) ?? 0) + 1);
+  }
+  for (const [group, size] of sizes) if (size < 2) sizes.delete(group);
+  return sizes;
+}
+
+/**
+ * Junta las opciones de cada grupo "a elegir" detrás de la primera, para que
+ * siempre salgan seguidas aunque se haya arrastrado otra parada en medio.
+ */
+export function gatherChoices(sequence: ItineraryEntry[]): ItineraryEntry[] {
+  const sizes = choiceSizes(sequence);
+  if (sizes.size === 0) return sequence;
+  const done = new Set<string>();
+  return sequence.flatMap((entry) => {
+    const group = entry.link.choice_group;
+    if (!group || !sizes.has(group)) return [entry];
+    if (done.has(group)) return [];
+    done.add(group);
+    return sequence.filter((e) => e.link.choice_group === group);
+  });
+}
+
+export interface StopMark {
+  /** "1", "2", "3a", "3b"…: lo que lleva la parada en la lista y en su pin. */
+  label: string;
+  /** Si es una opción a elegir: cuál es dentro de su grupo y cuántas hay. */
+  choice: { group: string; index: number; size: number } | null;
+}
+
+/**
+ * La numeración del día. Un grupo "a elegir" cuenta como una sola parada: sus
+ * opciones comparten número y se distinguen por la letra (3a, 3b, 3c).
+ * `sequence` tiene que venir ya ordenada con sortItinerary.
+ */
+export function stopMarks(sequence: ItineraryEntry[]): StopMark[] {
+  const sizes = choiceSizes(sequence);
+  let number = 0;
+  let index = 0;
+  return sequence.map((entry, i) => {
+    const group = entry.link.choice_group;
+    const size = group ? sizes.get(group) : undefined;
+    if (!group || !size) {
+      number += 1;
+      return { label: String(number), choice: null };
+    }
+    const first = sequence[i - 1]?.link.choice_group !== group;
+    if (first) number += 1;
+    index = first ? 0 : index + 1;
+    return {
+      label: `${number}${String.fromCharCode(97 + index)}`,
+      choice: { group, index, size },
+    };
+  });
+}
+
+/**
+ * Un pin por lugar, con todas sus etiquetas: el hotel que abre y cierra el
+ * día lleva "1 · 6" en vez de dos pines uno encima de otro.
+ */
+export function pinsOf(sequence: ItineraryEntry[], marks: StopMark[]) {
+  const pins = new Map<string, { place: Place; label: string }>();
+  sequence.forEach(({ place }, i) => {
+    const pin = pins.get(place.id);
+    if (pin) pin.label += ` · ${marks[i].label}`;
+    else pins.set(place.id, { place, label: marks[i].label });
+  });
+  return [...pins.values()];
 }
 
 /**

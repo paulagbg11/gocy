@@ -15,6 +15,10 @@ const normalize = (value: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 
+/** ¿Contiene el nombre lo escrito? Sin distinguir mayúsculas, tildes ni espacios. */
+export const nameIncludes = (name: string, query: string) =>
+  normalize(name).includes(normalize(query));
+
 /**
  * Busca si un sitio ya está guardado en el viaje.
  *

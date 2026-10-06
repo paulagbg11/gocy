@@ -1,5 +1,11 @@
 import { FALLBACK_CATEGORY_COLOR, FALLBACK_CATEGORY_EMOJI } from "@/lib/categories";
-import { sortItinerary, toLocalTimeValue, type ItineraryEntry } from "@/lib/days/itinerary";
+import {
+  sortItinerary,
+  stopMarks,
+  toLocalTimeValue,
+  type ItineraryEntry,
+  type StopMark,
+} from "@/lib/days/itinerary";
 import { dayColor } from "@/lib/estravel/buildRoute";
 import { distanceMeters } from "@/lib/geo";
 import { byName } from "@/lib/places";
@@ -23,6 +29,10 @@ export interface SummaryStop {
   link: PlaceDayLink;
   place: Place;
   order: number;
+  /** "3", o "3a" si es una opción a elegir: lo que lleva en la lista y en el mapa. */
+  label: string;
+  /** Opción a elegir: cuál es dentro de su grupo y cuántas hay. */
+  choice: StopMark["choice"];
   emoji: string;
   color: string;
   categoryName: string | null;
@@ -98,6 +108,10 @@ function stopNotes(link: PlaceDayLink, place: Place) {
   return notes?.trim() || null;
 }
 
+/** ¿Son dos opciones del mismo grupo "a elegir"? */
+export const sameChoice = (a: SummaryStop, b: SummaryStop | undefined) =>
+  !!a.choice && a.choice.group === b?.choice?.group;
+
 function eventsForDay(day: TripDay, documents: TripDocument[]): DayEvent[] {
   const events: DayEvent[] = [];
   for (const doc of documents) {
@@ -167,6 +181,7 @@ export function buildTripSummary({
         .filter((e): e is ItineraryEntry => !!e.place);
 
       const sequence = sortItinerary(entries);
+      const marks = stopMarks(sequence);
       const stops = sequence.map(({ link, place }, i): SummaryStop => {
         const category = categoriesById.get(place.category_id);
         const next = sequence[i + 1]?.place;
@@ -174,6 +189,8 @@ export function buildTripSummary({
           link,
           place,
           order: i + 1,
+          label: marks[i].label,
+          choice: marks[i].choice,
           emoji: category?.emoji ?? FALLBACK_CATEGORY_EMOJI,
           color: category?.color ?? FALLBACK_CATEGORY_COLOR,
           categoryName: category?.name ?? null,
@@ -190,7 +207,11 @@ export function buildTripSummary({
         stops,
         events: eventsForDay(day, documents),
         sleep: sleepForDay(day, documents),
-        meters: stops.reduce((sum, s) => sum + (s.metersToNext ?? 0), 0),
+        // De una opción a elegir a la siguiente no se camina: no suma.
+        meters: stops.reduce(
+          (sum, s, i) => sum + (sameChoice(s, stops[i + 1]) ? 0 : (s.metersToNext ?? 0)),
+          0,
+        ),
       };
     });
 

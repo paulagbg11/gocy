@@ -20,7 +20,8 @@ const shortName = (name: string) =>
 interface CategoryPinProps {
   place: Place;
   category?: Category;
-  order?: number;
+  /** El número de la parada, o su etiqueta si lleva letra o varias ("3a", "1 · 6"). */
+  order?: number | string;
   selected?: boolean;
   /** Pinta el nombre del sitio debajo de la gota. */
   showName?: boolean;

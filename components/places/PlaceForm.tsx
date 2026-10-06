@@ -40,9 +40,19 @@ interface PlaceFormProps {
   onCreated?: (place: Place) => void;
   /** Tras borrar; si no se pasa, se usa onDone. */
   onDeleted?: () => void;
+  /** El día que sale ya marcado al crear un lugar (desde "Añadir" de un día). */
+  defaultDayId?: string;
 }
 
-export function PlaceForm({ tripId, editing, fromSearch, onDone, onCreated, onDeleted }: PlaceFormProps) {
+export function PlaceForm({
+  tripId,
+  editing,
+  fromSearch,
+  onDone,
+  onCreated,
+  onDeleted,
+  defaultDayId,
+}: PlaceFormProps) {
   const { activeProfile } = useProfile();
   const createPlace = useCreatePlace();
   const updatePlace = useUpdatePlace();
@@ -54,7 +64,7 @@ export function PlaceForm({ tripId, editing, fromSearch, onDone, onCreated, onDe
   const { data: days = [] } = useTripDays(tripId);
   const { data: links = [] } = usePlaceDayLinks(tripId);
   const assignToDay = useAssignPlaceToDay();
-  const [dayId, setDayId] = useState<string | null>(null);
+  const [dayId, setDayId] = useState<string | null>(defaultDayId ?? null);
   const [essential, setEssential] = useState(editing?.essential ?? false);
 
   const { register, handleSubmit, control, formState: { isSubmitting } } = useForm<FormValues>({
