@@ -17,6 +17,7 @@ export function AnalogCamera({ size = 58, className }: { size?: number; classNam
       width={size}
       height={(size * 46) / 64}
       viewBox="0 0 64 46"
+      shapeRendering="geometricPrecision"
       className={className}
       aria-hidden="true"
     >

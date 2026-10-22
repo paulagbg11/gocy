@@ -40,7 +40,9 @@ export function TripCameraButton({ tripId }: { tripId: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Añadir fotos"
-        className="-my-2 shrink-0 drop-shadow-sm transition-transform duration-150 ease-out active:scale-90"
+        // Sin drop-shadow: en iOS un filtro sobre el SVG lo rasteriza a baja
+        // resolución y la cámara salía borrosa.
+        className="-my-2 shrink-0 transition-transform duration-150 ease-out active:scale-90"
       >
         <AnalogCamera size={60} />
       </button>
