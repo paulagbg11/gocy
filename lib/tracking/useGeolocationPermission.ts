@@ -66,3 +66,49 @@ export function useGeolocationPermission() {
 
   return { permission, request };
 }
+
+const PROMPT_KEY = "gocy:location-prompt";
+type PromptAnswer = "granted" | "dismissed" | null;
+
+const readAnswer = (): PromptAnswer => {
+  try {
+    const value = localStorage.getItem(PROMPT_KEY);
+    return value === "granted" || value === "dismissed" ? value : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Qué se contestó a la franja de "Mostrar mi ubicación", guardado en el
+ * móvil. Sin esto salía cada vez que se entraba en el mapa: en una PWA de iOS
+ * el permiso no siempre consta como concedido de una sesión a otra, y además
+ * cerrarla con la X solo duraba hasta salir de la pantalla.
+ */
+export function useLocationPromptAnswer(permission: GeolocationPermission) {
+  const [answer, setAnswer] = useState<PromptAnswer>(() =>
+    typeof window === "undefined" ? null : readAnswer(),
+  );
+
+  const remember = useCallback((value: Exclude<PromptAnswer, null>) => {
+    try {
+      localStorage.setItem(PROMPT_KEY, value);
+    } catch {
+      // Sin almacenamiento (modo privado) vuelve a salir; no es grave.
+    }
+    setAnswer(value);
+  }, []);
+
+  // Si el permiso ya está concedido (por la franja o por el sistema), se
+  // apunta para las próximas veces, aunque entonces iOS diga "prompt".
+  useEffect(() => {
+    if (permission !== "granted") return;
+    try {
+      localStorage.setItem(PROMPT_KEY, "granted");
+    } catch {
+      // Igual que arriba.
+    }
+  }, [permission]);
+
+  return { answer: permission === "granted" ? ("granted" as const) : answer, remember };
+}

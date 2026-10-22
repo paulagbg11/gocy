@@ -23,7 +23,7 @@ import { PlaceForm } from "@/components/places/PlaceForm";
 import { Sheet } from "@/components/ui/Sheet";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
-import { useGeolocationPermission } from "@/lib/tracking/useGeolocationPermission";
+import { useGeolocationPermission, useLocationPromptAnswer } from "@/lib/tracking/useGeolocationPermission";
 import { isTripActive, useTrackingPreference } from "@/lib/tracking/useTripTracking";
 import type { Place } from "@/lib/supabase/types";
 
@@ -45,7 +45,6 @@ export function MapScreen({ tripId }: { tripId: string }) {
   const [deselected, setDeselected] = useState<Set<string>>(new Set());
   const [pendingPlace, setPendingPlace] = useState<SelectedPlace | null>(null);
   const [duplicate, setDuplicate] = useState<Place | null>(null);
-  const [promptDismissed, setPromptDismissed] = useState(false);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [focus, setFocus] = useState<FocusTarget | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -56,7 +55,12 @@ export function MapScreen({ tripId }: { tripId: string }) {
   const { permission, request } = useGeolocationPermission();
   const { enabled: trackingEnabled } = useTrackingPreference(tripId);
   const tripActive = isTripActive(trip) && trackingEnabled;
-  const showLiveLocation = tripActive && permission === "granted";
+  const { answer: promptAnswer, remember: rememberPrompt } = useLocationPromptAnswer(permission);
+  // Si ya se activó una vez, el punto sale aunque el navegador diga "prompt":
+  // iOS lo hace en las PWA, y volver a enseñar la franja cada vez cansaba.
+  const showLiveLocation =
+    tripActive &&
+    (permission === "granted" || (promptAnswer === "granted" && permission === "prompt"));
 
   // `Map` aquí es el componente de @vis.gl/react-google-maps (importado más
   // arriba), así que usamos globalThis.Map para el Map de JS.
@@ -169,11 +173,13 @@ export function MapScreen({ tripId }: { tripId: string }) {
             ))}
           </div>
 
-          {tripActive && !promptDismissed && permission !== "granted" && (
+          {tripActive && !promptAnswer && permission !== "granted" && (
             <LocationPrompt
               permission={permission}
-              onRequest={request}
-              onDismiss={() => setPromptDismissed(true)}
+              onRequest={async () => {
+                if (await request()) rememberPrompt("granted");
+              }}
+              onDismiss={() => rememberPrompt("dismissed")}
             />
           )}
         </div>

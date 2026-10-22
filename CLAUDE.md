@@ -83,8 +83,10 @@ con EPERM.
   lugar del día. Solo deja hoy y días pasados, **nunca futuros**: antes de
   empezar el viaje la cámara no sale. Hoy, los lugares salen del más cercano
   al más lejano; sin estaciones, aeropuertos ni hotel (`isZoneAnchor`).
-  Estravel tiene el **Álbum**, por días, que se descarga en un .zip
-  (`fflate`, una carpeta por día). Se guardan en `trip_photos` y en un bucket
+  Estravel tiene el **Álbum**, por días, con dos salidas: un **póster** para
+  enmarcar en canvas (`lib/photos/poster.ts`, tamaño fijo A4 a 2400 px: portada,
+  mapa del recorrido y las fotos colgadas de un hilo en zigzag; si hay más de
+  24 se eligen) y un **PDF** con react-pdf (`components/photos/pdf/`). Se guardan en `trip_photos` y en un bucket
   privado `trip-photos` con URL firmadas: ~2048 px y una miniatura. La fecha y
   el GPS se leen del EXIF (`lib/exif.ts`) **antes** de reducirlas, porque el
   canvas los borra. No confundir con `lib/place-photos.ts` (Wikimedia).

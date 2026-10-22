@@ -40,9 +40,9 @@ export function TripCameraButton({ tripId }: { tripId: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Añadir fotos"
-        className="text-muted-foreground hover:text-foreground"
+        className="-my-2 shrink-0 drop-shadow-sm transition-transform duration-150 ease-out active:scale-90"
       >
-        <AnalogCamera size={21} />
+        <AnalogCamera size={60} />
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title="Añadir fotos">
         {open && <AddPhotoForm tripId={tripId} days={allowed} />}
