@@ -209,6 +209,26 @@ export interface Note {
   updated_at: string;
 }
 
+/** Foto propia del viaje (0018), colgada de un lugar y, si viene de una parada, de su día. */
+export interface TripPhoto {
+  id: string;
+  trip_id: string;
+  place_id: string | null;
+  day_id: string | null;
+  storage_path: string;
+  thumb_path: string;
+  width: number | null;
+  height: number | null;
+  /** Del EXIF de la original; null si no lo traía. */
+  taken_at: string | null;
+  lat: number | null;
+  lng: number | null;
+  caption: string | null;
+  favorite: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface NoteItem {
   id: string;
   note_id: string;

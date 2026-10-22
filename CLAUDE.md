@@ -78,13 +78,19 @@ con EPERM.
   móvil con `pdfjs-dist` y `lib/docs/readReservation.ts` rellena lo que
   entiende con reglas (sin IA, decisión de Paula); nunca inventa una hora. Se abren en vista de lectura que solo enseña lo relleno; editar es
   otro paso.
+- **Fotos** — en el panel de cada parada se hacen con la cámara o se sacan de
+  la galería (`components/photos/`). Se guardan en `trip_photos`, colgadas del
+  lugar y del día, en un bucket privado `trip-photos` con URL firmadas: una
+  versión de ~2048 px y una miniatura. La fecha y el GPS se leen del EXIF
+  (`lib/exif.ts`) **antes** de reducirlas, porque el canvas los borra. No
+  confundir con `lib/place-photos.ts`, que son fotos de Wikimedia.
 - **Notas** — tablón de post-its con color, enlace y lista de casillas. Se pueden
   fijar arriba y tachar sin borrarlas.
 
 ## Modelo de datos
 
 `trips` → `trip_days`, `places`, `documents` (→ `attachments`), `notes` (→
-`note_items`), `track_points`. `place_day_links` cruza lugares con días y es lo
+`note_items`), `track_points`, `trip_photos`. `place_day_links` cruza lugares con días y es lo
 que ordena el recorrido; además lleva la nota de esa parada (`notes`) y sus
 tramos de transporte (`transit`, jsonb: es una lista que solo se lee y escribe
 entera, nunca se consulta por dentro). `categories` es **global**, no por viaje, y cada viaje

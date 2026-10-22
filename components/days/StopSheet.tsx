@@ -8,6 +8,7 @@ import { Chip } from "@/components/ui/Chip";
 import { toLocalTimeValue, type ItineraryEntry, type StopMark } from "@/lib/days/itinerary";
 import { cleanSteps } from "@/lib/days/transit";
 import { TransitEditor } from "./TransitEditor";
+import { StopPhotos } from "@/components/photos/StopPhotos";
 import type { TransitStep } from "@/lib/supabase/types";
 
 interface StopSheetProps {
@@ -34,7 +35,7 @@ interface StopSheetProps {
   onRemove: (entry: ItineraryEntry) => void;
 }
 
-/** Hora, trayecto y nota de una parada del día. */
+/** Fotos, hora, trayecto y nota de una parada del día. */
 export function StopSheet({
   entry,
   isTransport,
@@ -120,6 +121,12 @@ function StopForm({
         onSave(entry, time, notes, cleanSteps(transit), copyToAll, [...choiceWith]);
       }}
     >
+      {/* Las fotos se guardan al momento, sin esperar al botón Guardar. */}
+      <div>
+        <Label>Fotos</Label>
+        <StopPhotos tripId={entry.place.trip_id} placeId={entry.place.id} dayId={entry.link.day_id} />
+      </div>
+
       <div>
         <Label htmlFor="stop-time">Hora</Label>
         <div className="flex gap-2">
