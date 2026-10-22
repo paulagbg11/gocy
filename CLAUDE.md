@@ -78,12 +78,16 @@ con EPERM.
   móvil con `pdfjs-dist` y `lib/docs/readReservation.ts` rellena lo que
   entiende con reglas (sin IA, decisión de Paula); nunca inventa una hora. Se abren en vista de lectura que solo enseña lo relleno; editar es
   otro paso.
-- **Fotos** — en el panel de cada parada se hacen con la cámara o se sacan de
-  la galería (`components/photos/`). Se guardan en `trip_photos`, colgadas del
-  lugar y del día, en un bucket privado `trip-photos` con URL firmadas: una
-  versión de ~2048 px y una miniatura. La fecha y el GPS se leen del EXIF
-  (`lib/exif.ts`) **antes** de reducirlas, porque el canvas los borra. No
-  confundir con `lib/place-photos.ts`, que son fotos de Wikimedia.
+- **Fotos** — la cámara de carrete de la cabecera del viaje (`TripCamera`)
+  abre una hoja para hacer la foto o sacarla de la galería y apuntarla a un
+  lugar del día. Solo deja hoy y días pasados, **nunca futuros**: antes de
+  empezar el viaje la cámara no sale. Hoy, los lugares salen del más cercano
+  al más lejano; sin estaciones, aeropuertos ni hotel (`isZoneAnchor`).
+  Estravel tiene el **Álbum**, por días, que se descarga en un .zip
+  (`fflate`, una carpeta por día). Se guardan en `trip_photos` y en un bucket
+  privado `trip-photos` con URL firmadas: ~2048 px y una miniatura. La fecha y
+  el GPS se leen del EXIF (`lib/exif.ts`) **antes** de reducirlas, porque el
+  canvas los borra. No confundir con `lib/place-photos.ts` (Wikimedia).
 - **Notas** — tablón de post-its con color, enlace y lista de casillas. Se pueden
   fijar arriba y tachar sin borrarlas.
 

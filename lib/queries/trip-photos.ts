@@ -39,14 +39,7 @@ export function usePhotoUrls(paths: string[]) {
   const sorted = [...paths].sort();
   return useQuery({
     queryKey: ["trip_photo_urls", ...sorted],
-    queryFn: async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(sorted, URL_TTL_S);
-      if (error) throw error;
-      const urls = new Map<string, string>();
-      for (const item of data) if (item.path && item.signedUrl) urls.set(item.path, item.signedUrl);
-      return urls;
-    },
+    queryFn: () => signPhotoPaths(sorted),
     enabled: sorted.length > 0,
     staleTime: (URL_TTL_S - 10 * 60) * 1000,
     gcTime: (URL_TTL_S - 5 * 60) * 1000,
@@ -71,6 +64,16 @@ async function patchPhotos(
 
 const refreshPhotos = (queryClient: QueryClient, tripId: string) =>
   queryClient.invalidateQueries({ queryKey: ["trip_photos", tripId] });
+
+/** Ruta del bucket → URL firmada, para una hora. */
+export async function signPhotoPaths(paths: string[]): Promise<Map<string, string>> {
+  const supabase = createClient();
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(paths, URL_TTL_S);
+  if (error) throw error;
+  const urls = new Map<string, string>();
+  for (const item of data) if (item.path && item.signedUrl) urls.set(item.path, item.signedUrl);
+  return urls;
+}
 
 interface UploadPhotoInput {
   tripId: string;

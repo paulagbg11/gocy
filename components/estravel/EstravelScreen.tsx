@@ -20,6 +20,7 @@ import { FitBounds } from "@/components/map/FitBounds";
 import { CategoryPin } from "@/components/map/CategoryPin";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Button } from "@/components/ui/Button";
+import { AlbumButton } from "@/components/photos/AlbumButton";
 import { MUTED_MAP_STYLE } from "./mapStyle";
 
 const DEFAULT_CENTER = { lat: 40.4168, lng: -3.7038 };
@@ -196,8 +197,11 @@ function EstravelContent({ tripId }: { tripId: string }) {
           className="shrink-0"
         >
           {sharing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-          Imagen
+          {/* En el móvil, solo el icono: con el texto y el de Álbum al lado,
+              no cabían los tres modos del mapa. */}
+          <span className="hidden sm:inline">Imagen</span>
         </Button>
+        <AlbumButton tripId={tripId} />
       </div>
 
       <div className="flex-[3] min-h-[240px]">

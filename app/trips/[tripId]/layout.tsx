@@ -7,6 +7,7 @@ import { ArrowLeft, Map, CalendarDays, FileText, Footprints, Settings, StickyNot
 import clsx from "clsx";
 import { useTrip } from "@/lib/queries/trips";
 import { useTripRealtime } from "@/lib/realtime/useTripRealtime";
+import { TripCameraButton } from "@/components/photos/TripCamera";
 import { isTripActive, useTrackingPreference, useTripTracking } from "@/lib/tracking/useTripTracking";
 
 const TABS = [
@@ -41,13 +42,16 @@ export default function TripLayout({
           <ArrowLeft size={18} />
         </Link>
         <h1 className="font-semibold truncate">{trip?.name ?? "…"}</h1>
-        <Link
-          href={`/trips/${tripId}/settings`}
-          aria-label="Ajustes del viaje"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <Settings size={18} />
-        </Link>
+        <div className="flex items-center gap-4">
+          <TripCameraButton tripId={tripId} />
+          <Link
+            href={`/trips/${tripId}/settings`}
+            aria-label="Ajustes del viaje"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Settings size={18} />
+          </Link>
+        </div>
       </header>
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">{children}</div>

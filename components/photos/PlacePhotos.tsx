@@ -6,16 +6,14 @@ import { Button } from "@/components/ui/Button";
 import { useProfile } from "@/components/profile/ProfileProvider";
 import { usePhotoUrls, useTripPhotos, useUploadTripPhoto } from "@/lib/queries/trip-photos";
 import { PhotoViewer } from "./PhotoViewer";
-import type { TripPhoto } from "@/lib/supabase/types";
-
-/** Orden del carrete: por cuándo se hizo, y si no se sabe, por cuándo se subió. */
-export const photoTime = (p: TripPhoto) => Date.parse(p.taken_at ?? p.created_at);
+import { photoTime } from "@/lib/photos/days";
 
 /**
- * Fotos de un lugar dentro del panel de su parada: las de cualquier día en que
- * se haya pasado por ahí, y botones para hacer una o sacarla de la galería.
+ * Fotos de un lugar (las de cualquier día en que se haya pasado por ahí) y
+ * botones para hacer una o sacarla de la galería. Las nuevas se apuntan al
+ * día `dayId`.
  */
-export function StopPhotos({
+export function PlacePhotos({
   tripId,
   placeId,
   dayId,
